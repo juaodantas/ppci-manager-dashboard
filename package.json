@@ -1,0 +1,23 @@
+{
+  "name": "manager-dashboard",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "format": "turbo run format",
+    "api:serve": "supabase functions serve api --env-file supabase/.env.local",
+    "api:deploy": "supabase functions deploy api",
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset"
+  },
+  "packageManager": "npm@10.9.2",
+  "devDependencies": {
+    "supabase": "^2.84.6",
+    "turbo": "^2.5.4"
+  }
+}

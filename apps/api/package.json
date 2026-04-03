@@ -1,0 +1,10 @@
+{
+  "name": "@manager/api",
+  "version": "0.0.1",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "supabase functions serve api --env-file ../../supabase/.env.local",
+    "deploy": "supabase functions deploy api"
+  }
+}
