@@ -25,16 +25,52 @@ export const FinancialRepository = {
   }): Promise<{ entries: FinancialEntry[]; total: number }> {
     const { type, date_from, date_to, limit, offset } = params
 
-    const rows = await sql`
-      SELECT *, COUNT(*) OVER()::int AS total_count
-      FROM financial_entries
-      WHERE
-        (${type ?? null}::text IS NULL OR type = ${type ?? null}::text)
-        AND (${date_from ?? null} IS NULL OR date >= ${date_from ?? null}::date)
-        AND (${date_to ?? null} IS NULL OR date <= ${date_to ?? null}::date)
-      ORDER BY date DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `
+    // When a date range is provided, include fixed costs dynamically (one entry per month per active cost)
+    const rows = date_from && date_to
+      ? await sql`
+          SELECT *, COUNT(*) OVER()::int AS total_count
+          FROM (
+            SELECT id, type::text, source_type, source_id, amount::float, date, description, created_at
+            FROM financial_entries
+            WHERE
+              (${type ?? null}::text IS NULL OR type::text = ${type ?? null}::text)
+              AND date BETWEEN ${date_from}::date AND ${date_to}::date
+
+            UNION ALL
+
+            SELECT
+              fc.id,
+              'expense'           AS type,
+              'fixed_cost'        AS source_type,
+              fc.id               AS source_id,
+              fc.amount::float,
+              LEAST(
+                make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
+                (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
+              )                   AS date,
+              fc.name             AS description,
+              fc.created_at
+            FROM fixed_costs fc
+            CROSS JOIN generate_series(
+              date_trunc('month', ${date_from}::date),
+              date_trunc('month', ${date_to}::date),
+              '1 month'::interval
+            ) AS gs
+            WHERE fc.active = true
+              AND (${type ?? null}::text IS NULL OR 'expense' = ${type ?? null}::text)
+          ) combined
+          ORDER BY date DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      : await sql`
+          SELECT *, COUNT(*) OVER()::int AS total_count
+          FROM financial_entries
+          WHERE
+            (${type ?? null}::text IS NULL OR type::text = ${type ?? null}::text)
+          ORDER BY date DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+
     const total = rows.length > 0 ? (rows[0].total_count as number) : 0
     return { entries: rows.map(toFinancialEntry), total }
   },
@@ -43,22 +79,52 @@ export const FinancialRepository = {
     const { date_from, date_to } = params
 
     const [summary] = await sql`
+      WITH all_entries AS (
+        SELECT type::text, amount FROM financial_entries
+        WHERE date BETWEEN ${date_from}::date AND ${date_to}::date
+        UNION ALL
+        SELECT 'expense' AS type, fc.amount
+        FROM fixed_costs fc
+        CROSS JOIN generate_series(
+          date_trunc('month', ${date_from}::date),
+          date_trunc('month', ${date_to}::date),
+          '1 month'::interval
+        ) AS gs
+        WHERE fc.active = true
+      )
       SELECT
         COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0)::float  AS total_income,
         COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0)::float AS total_expense,
         COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0)::float AS balance
-      FROM financial_entries
-      WHERE date BETWEEN ${date_from}::date AND ${date_to}::date
+      FROM all_entries
     `
 
     const monthRows = await sql`
+      WITH all_entries AS (
+        SELECT type::text, amount, date FROM financial_entries
+        WHERE date BETWEEN ${date_from}::date AND ${date_to}::date
+        UNION ALL
+        SELECT
+          'expense' AS type,
+          fc.amount,
+          LEAST(
+            make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
+            (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
+          ) AS date
+        FROM fixed_costs fc
+        CROSS JOIN generate_series(
+          date_trunc('month', ${date_from}::date),
+          date_trunc('month', ${date_to}::date),
+          '1 month'::interval
+        ) AS gs
+        WHERE fc.active = true
+      )
       SELECT
         date_trunc('month', date)::date::text AS month,
         COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0)::float  AS income,
         COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0)::float AS expense,
         COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0)::float AS balance
-      FROM financial_entries
-      WHERE date BETWEEN ${date_from}::date AND ${date_to}::date
+      FROM all_entries
       GROUP BY date_trunc('month', date)
       ORDER BY date_trunc('month', date) ASC
     `

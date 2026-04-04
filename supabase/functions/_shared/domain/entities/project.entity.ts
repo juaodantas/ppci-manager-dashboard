@@ -4,6 +4,7 @@ export interface ProjectService {
   id: string
   project_id: string
   service_id: string
+  service_name: string
   description?: string
   quantity: number
   unit_price: number

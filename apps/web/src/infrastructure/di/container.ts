@@ -47,6 +47,7 @@ import {
   AddProjectServiceUseCase,
   UpdateProjectServiceUseCase,
   RemoveProjectServiceUseCase,
+  DeleteProjectUseCase,
 } from '../../application/use-cases/project/project.use-cases'
 import {
   GetPaymentsUseCase,
@@ -132,6 +133,7 @@ export const container = {
     addService: new AddProjectServiceUseCase(projectRepo),
     updateService: new UpdateProjectServiceUseCase(projectRepo),
     removeService: new RemoveProjectServiceUseCase(projectRepo),
+    delete: new DeleteProjectUseCase(projectRepo),
   },
 
   payments: {

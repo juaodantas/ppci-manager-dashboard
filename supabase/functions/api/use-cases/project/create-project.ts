@@ -9,6 +9,7 @@ export async function createProject(dto: CreateProjectDto): Promise<Project> {
     name: dto.name,
     description: dto.description,
     start_date: dto.start_date,
+    end_date: dto.end_date,
     total_value: dto.total_value,
   })
 }

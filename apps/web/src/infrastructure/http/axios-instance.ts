@@ -16,21 +16,41 @@ export function createAxiosInstance(tokenPort: IAuthTokenPort, onRefresh: () => 
     return config
   })
 
+  // Serializes concurrent refresh attempts so only one runs at a time
+  let refreshPromise: Promise<string> | null = null
+
+  function redirectToLogin() {
+    tokenPort.clear()
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login'
+    }
+  }
+
   instance.interceptors.response.use(
     (response) => response,
     async (error) => {
       const original = error.config
-      if (error.response?.status === 401 && !original._retry && typeof window !== 'undefined') {
+
+      // Never interfere with auth endpoints (login, register, refresh)
+      if (original?.url?.includes('/auth/')) {
+        return Promise.reject(error)
+      }
+
+      if (error.response?.status === 401 && !original._retry) {
         original._retry = true
         try {
-          const newToken = await onRefresh()
+          // Reuse an in-flight refresh so parallel 401s don't trigger multiple refreshes
+          if (!refreshPromise) {
+            refreshPromise = onRefresh().finally(() => { refreshPromise = null })
+          }
+          const newToken = await refreshPromise
           original.headers.Authorization = `Bearer ${newToken}`
           return instance(original)
         } catch {
-          tokenPort.clear()
-          window.location.href = '/login'
+          redirectToLogin()
         }
       }
+
       return Promise.reject(error)
     },
   )

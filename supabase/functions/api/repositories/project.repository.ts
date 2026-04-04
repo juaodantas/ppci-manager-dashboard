@@ -7,6 +7,7 @@ function toProjectService(row: Record<string, any>): ProjectService {
     id: row.id as string,
     project_id: row.project_id as string,
     service_id: row.service_id as string,
+    service_name: row.service_name as string,
     description: row.description as string | undefined,
     quantity: Number(row.quantity),
     unit_price: Number(row.unit_price),
@@ -60,7 +61,11 @@ export const ProjectRepository = {
     if (rows.length === 0) return null
 
     const serviceRows = await sql`
-      SELECT * FROM project_services WHERE project_id = ${id} ORDER BY id
+      SELECT ps.*, sc.name AS service_name
+      FROM project_services ps
+      JOIN services sc ON sc.id = ps.service_id
+      WHERE ps.project_id = ${id}
+      ORDER BY ps.id
     `
     const services = serviceRows.map(toProjectService)
 
@@ -73,16 +78,18 @@ export const ProjectRepository = {
     name: string
     description?: string
     start_date?: string
+    end_date?: string
     total_value?: number
   }): Promise<Project> {
     const rows = await sql`
-      INSERT INTO projects (customer_id, quote_id, name, description, start_date, total_value)
+      INSERT INTO projects (customer_id, quote_id, name, description, start_date, end_date, total_value)
       VALUES (
         ${data.customer_id},
         ${data.quote_id ?? null},
         ${data.name},
         ${data.description ?? null},
         ${data.start_date ?? null},
+        ${data.end_date ?? null},
         ${data.total_value ?? 0}
       )
       RETURNING *

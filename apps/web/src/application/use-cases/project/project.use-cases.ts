@@ -60,3 +60,10 @@ export class RemoveProjectServiceUseCase {
     return this.repo.removeService(id)
   }
 }
+
+export class DeleteProjectUseCase {
+  constructor(private readonly repo: IProjectRepository) {}
+  execute(id: string): Promise<void> {
+    return this.repo.delete(id)
+  }
+}

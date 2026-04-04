@@ -1,10 +1,11 @@
 'use client'
 
 import { use, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import type { ProjectService } from '@manager/domain'
-import { useProject, useUpdateProject, useAddProjectService, useRemoveProjectService } from '../../../../presentation/hooks/useProjects'
+import { useProject, useUpdateProject, useAddProjectService, useRemoveProjectService, useDeleteProject } from '../../../../presentation/hooks/useProjects'
 import { usePayments, useCreatePayment, usePayPayment } from '../../../../presentation/hooks/usePayments'
 import { useServiceCatalog } from '../../../../presentation/hooks/useServiceCatalog'
 import { useCustomer } from '../../../../presentation/hooks/useCustomers'
@@ -38,6 +39,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const router = useRouter()
   const { data: project, isLoading } = useProject(id)
   const { data: paymentsData } = usePayments({ project_id: id, limit: 50, offset: 0 })
   const { data: catalog } = useServiceCatalog()
@@ -45,13 +47,22 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const updateProject = useUpdateProject()
   const addService = useAddProjectService()
   const removeService = useRemoveProjectService()
+  const deleteProject = useDeleteProject()
   const createPayment = useCreatePayment()
   const payPayment = usePayPayment()
 
   const [tab, setTab] = useState<'services' | 'payments'>('services')
   const [addServiceOpen, setAddServiceOpen] = useState(false)
   const [addPaymentOpen, setAddPaymentOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [newStatus, setNewStatus] = useState('')
+
+  // edit form
+  const [editName, setEditName] = useState('')
+  const [editDesc, setEditDesc] = useState('')
+  const [editStartDate, setEditStartDate] = useState('')
+  const [editEndDate, setEditEndDate] = useState('')
+  const [editTotalValue, setEditTotalValue] = useState('')
 
   // service form
   const [svcServiceId, setSvcServiceId] = useState('')
@@ -65,6 +76,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [pmtMethod, setPmtMethod] = useState('')
   const [pmtNotes, setPmtNotes] = useState('')
 
+  // pay modal
+  const [payModalOpen, setPayModalOpen] = useState(false)
+  const [payingId, setPayingId] = useState('')
+  const [paidDate, setPaidDate] = useState('')
+
   if (isLoading) return <div className="py-12 text-center text-gray-500">Carregando...</div>
   if (!project) return <div className="py-12 text-center text-gray-500">Projeto não encontrado</div>
 
@@ -73,6 +89,36 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const payments = paymentsData?.payments ?? []
   const serviceOptions = (catalog ?? []).map((s) => ({ value: s.id, label: `${s.name} (${s.category.name})` }))
   const customerName = customer?.name ?? project.customer_id
+
+  const handleOpenEdit = () => {
+    setEditName(project.name)
+    setEditDesc(project.description ?? '')
+    setEditStartDate(project.start_date ?? '')
+    setEditEndDate(project.end_date ?? '')
+    setEditTotalValue(String(project.total_value))
+    setEditOpen(true)
+  }
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await updateProject.mutateAsync({
+      id,
+      dto: {
+        name: editName || undefined,
+        description: editDesc || undefined,
+        start_date: editStartDate || undefined,
+        end_date: editEndDate || undefined,
+        total_value: editTotalValue ? parseFloat(editTotalValue) : undefined,
+      },
+    })
+    setEditOpen(false)
+  }
+
+  const handleDeleteProject = async () => {
+    if (!confirm(`Deseja realmente excluir o projeto "${project.name}"? Esta ação não pode ser desfeita.`)) return
+    await deleteProject.mutateAsync(id)
+    router.push('/projects')
+  }
 
   const handleStatusChange = async (status: string) => {
     await updateProject.mutateAsync({ id, dto: { status: status as never } })
@@ -106,9 +152,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     setPmtAmount(''); setPmtDueDate(''); setPmtMethod(''); setPmtNotes('')
   }
 
-  const handlePay = async (paymentId: string) => {
-    const paid_date = prompt('Data de pagamento (YYYY-MM-DD):') ?? new Date().toISOString().slice(0, 10)
-    await payPayment.mutateAsync({ id: paymentId, paid_date })
+  const handleOpenPay = (paymentId: string) => {
+    setPayingId(paymentId)
+    setPaidDate(new Date().toISOString().slice(0, 10))
+    setPayModalOpen(true)
+  }
+
+  const handleConfirmPay = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await payPayment.mutateAsync({ id: payingId, paid_date: paidDate })
+    setPayModalOpen(false)
+    setPayingId('')
+    setPaidDate('')
   }
 
   return (
@@ -119,11 +174,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[project.status] ?? ''}`}>
           {STATUS_LABELS[project.status] ?? project.status}
         </span>
+        {!isFinished && (
+          <Button variant="secondary" size="sm" onClick={handleOpenEdit}>Editar</Button>
+        )}
         <ContractDownloadButton
           project={project as typeof project & { services: ProjectService[] }}
           customerName={customerName}
           payments={payments}
         />
+        <Button variant="danger" size="sm" loading={deleteProject.isPending} onClick={handleDeleteProject}>Excluir Projeto</Button>
       </div>
 
       <div className="grid grid-cols-3 gap-4 rounded-lg border border-gray-200 bg-white p-6">
@@ -198,7 +257,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 )}
                 {services.map((svc: ProjectService) => (
                   <tr key={svc.id}>
-                    <td className="px-6 py-4 text-sm text-gray-900">{svc.description ?? svc.service_id}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      <span className="font-medium">{svc.service_name}</span>
+                      {svc.description && <span className="ml-2 text-gray-500">— {svc.description}</span>}
+                    </td>
                     <td className="px-6 py-4 text-right text-sm text-gray-700">{svc.quantity}</td>
                     <td className="px-6 py-4 text-right text-sm text-gray-700">{svc.unit_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">{svc.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
@@ -245,7 +307,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">{pmt.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     <td className="px-6 py-4 text-right">
                       {pmt.status === 'pending' && (
-                        <Button size="sm" onClick={() => handlePay(pmt.id)} loading={payPayment.isPending}>Marcar como Pago</Button>
+                        <Button size="sm" onClick={() => handleOpenPay(pmt.id)}>Marcar como Pago</Button>
                       )}
                     </td>
                   </tr>
@@ -255,6 +317,31 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       )}
+
+      <Modal open={payModalOpen} title="Registrar Pagamento" onClose={() => setPayModalOpen(false)}>
+        <form onSubmit={handleConfirmPay} className="flex flex-col gap-4">
+          <Input label="Data de Pagamento *" type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} required />
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setPayModalOpen(false)}>Cancelar</Button>
+            <Button type="submit" loading={payPayment.isPending}>Confirmar</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={editOpen} title="Editar Projeto" onClose={() => setEditOpen(false)}>
+        <form onSubmit={handleSaveEdit} className="flex flex-col gap-4">
+          <Input label="Nome *" value={editName} onChange={(e) => setEditName(e.target.value)} required />
+          <Input label="Descrição" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Data de Início" type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} />
+            <Input label="Previsão de Conclusão" type="date" value={editEndDate} onChange={(e) => setEditEndDate(e.target.value)} />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>Cancelar</Button>
+            <Button type="submit" loading={updateProject.isPending}>Salvar</Button>
+          </div>
+        </form>
+      </Modal>
 
       <Modal open={addServiceOpen} title="Adicionar Serviço" onClose={() => setAddServiceOpen(false)}>
         <form onSubmit={handleAddService} className="flex flex-col gap-4">

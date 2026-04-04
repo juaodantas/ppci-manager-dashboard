@@ -4,6 +4,7 @@ import {
   Text,
   View,
   StyleSheet,
+  Image,
 } from '@react-pdf/renderer'
 import type { Project, ProjectService, Payment } from '@manager/domain'
 
@@ -21,12 +22,18 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     paddingBottom: 16,
     borderBottomWidth: 2,
-    borderBottomColor: '#1D4ED8',
+    borderBottomColor: '#562923',
+  },
+  logo: {
+    width: 80,
+    height: 40,
+    objectFit: 'contain',
+    marginBottom: 4,
   },
   companyName: {
     fontSize: 20,
     fontFamily: 'Helvetica-Bold',
-    color: '#1D4ED8',
+    color: '#562923',
   },
   companySubtitle: {
     fontSize: 9,
@@ -204,7 +211,7 @@ export function ContractPDF({
   project,
   customerName,
   payments,
-  companyName = 'Empresa PPCI',
+  companyName = 'Empresa WS',
 }: ContractPDFProps) {
   const services = project.services ?? []
   const totalServices = services.reduce((s, i) => s + i.total_price, 0)
@@ -215,6 +222,7 @@ export function ContractPDF({
         {/* Header */}
         <View style={styles.header}>
           <View>
+            <Image style={styles.logo} src="/logo.png" />
             <Text style={styles.companyName}>{companyName}</Text>
             <Text style={styles.companySubtitle}>Proteção e Prevenção Contra Incêndio</Text>
           </View>
@@ -268,7 +276,7 @@ export function ContractPDF({
           {services.map((svc, i) => (
             <View key={svc.id} style={[styles.tableRow, i % 2 !== 0 ? styles.tableRowEven : {}]}>
               <Text style={[styles.tdText, styles.colService]}>
-                {svc.description ?? `Serviço ${i + 1}`}
+                {svc.service_name}{svc.description ? ` — ${svc.description}` : ''}
               </Text>
               <Text style={[styles.tdText, styles.colQty]}>{svc.quantity}</Text>
               <Text style={[styles.tdText, styles.colUnit]}>{fmt(svc.unit_price)}</Text>

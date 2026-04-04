@@ -18,6 +18,7 @@ export default function NewProjectPage() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [totalValue, setTotalValue] = useState('')
 
   const customers = customersData?.customers ?? []
@@ -30,6 +31,7 @@ export default function NewProjectPage() {
       name,
       description: description || undefined,
       start_date: startDate || undefined,
+      end_date: endDate || undefined,
       total_value: totalValue ? parseFloat(totalValue) : undefined,
     })
     router.push(`/projects/${project.id}`)
@@ -55,7 +57,7 @@ export default function NewProjectPage() {
           <Input label="Nome do Projeto *" value={name} onChange={(e) => setName(e.target.value)} required />
           <Input label="Descrição" value={description} onChange={(e) => setDescription(e.target.value)} />
           <Input label="Data de Início" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          <Input label="Valor Total (R$)" type="number" min="0" step="0.01" value={totalValue} onChange={(e) => setTotalValue(e.target.value)} />
+          <Input label="Previsão de Conclusão" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
         </div>
         <div className="flex justify-end gap-3">
           <Link href="/projects"><Button type="button" variant="secondary">Cancelar</Button></Link>

@@ -6,6 +6,7 @@ export interface CreateProjectDto {
   name: string
   description?: string
   start_date?: string
+  end_date?: string
   total_value?: number
 }
 
@@ -44,4 +45,5 @@ export interface IProjectRepository {
   addService(projectId: string, data: AddProjectServiceDto): Promise<ProjectService>
   updateService(id: string, data: UpdateProjectServiceDto): Promise<ProjectService>
   removeService(id: string): Promise<void>
+  delete(id: string): Promise<void>
 }

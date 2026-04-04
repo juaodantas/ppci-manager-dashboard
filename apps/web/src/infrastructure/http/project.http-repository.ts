@@ -49,4 +49,8 @@ export class ProjectHttpRepository implements IProjectRepository {
   async removeService(id: string): Promise<void> {
     await this.http.delete(`/project-services/${id}`)
   }
+
+  async delete(id: string): Promise<void> {
+    await this.http.delete(`/projects/${id}`)
+  }
 }

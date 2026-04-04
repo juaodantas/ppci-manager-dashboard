@@ -5,6 +5,7 @@ import {
   View,
   StyleSheet,
   Font,
+  Image,
 } from '@react-pdf/renderer'
 import type { Quote, QuoteItem } from '@manager/domain'
 
@@ -28,12 +29,18 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     paddingBottom: 16,
     borderBottomWidth: 2,
-    borderBottomColor: '#2563EB',
+    borderBottomColor: '#562923',
+  },
+  logo: {
+    width: 80,
+    height: 40,
+    objectFit: 'contain',
+    marginBottom: 4,
   },
   companyName: {
     fontSize: 20,
     fontFamily: 'Helvetica-Bold',
-    color: '#2563EB',
+    color: '#562923',
   },
   companySubtitle: {
     fontSize: 9,
@@ -210,7 +217,7 @@ interface QuotePDFProps {
   companyName?: string
 }
 
-export function QuotePDF({ quote, customerName, companyName = 'Empresa PPCI' }: QuotePDFProps) {
+export function QuotePDF({ quote, customerName, companyName = 'Empresa WS' }: QuotePDFProps) {
   const subtotal = (quote.items ?? []).reduce((s, i) => s + i.total_price, 0)
   const total = subtotal - (quote.discount ?? 0)
 
@@ -220,6 +227,7 @@ export function QuotePDF({ quote, customerName, companyName = 'Empresa PPCI' }: 
         {/* Header */}
         <View style={styles.header}>
           <View>
+            <Image style={styles.logo} src="/logo.png" />
             <Text style={styles.companyName}>{companyName}</Text>
             <Text style={styles.companySubtitle}>Proteção e Prevenção Contra Incêndio</Text>
           </View>

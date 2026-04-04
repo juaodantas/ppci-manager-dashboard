@@ -81,3 +81,11 @@ export function useRemoveProjectService() {
     onSuccess: (_data, { projectId }) => qc.invalidateQueries({ queryKey: ['projects', projectId] }),
   })
 }
+
+export function useDeleteProject() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => container.projects.delete.execute(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  })
+}

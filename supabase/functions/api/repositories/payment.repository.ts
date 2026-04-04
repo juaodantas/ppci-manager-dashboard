@@ -31,7 +31,7 @@ export const PaymentRepository = {
       FROM payments
       WHERE
         (${project_id ?? null}::uuid IS NULL OR project_id = ${project_id ?? null}::uuid)
-        AND (${status ?? null} IS NULL OR status = ${status ?? null})
+        AND (${status ?? null}::text IS NULL OR status::text = ${status ?? null}::text)
       ORDER BY due_date DESC
       LIMIT ${limit} OFFSET ${offset}
     `
