@@ -7,7 +7,11 @@ import { Button } from '../ui/Button'
 
 const navItems = [
   { href: '/', label: 'Dashboard' },
-  { href: '/services', label: 'Serviços' },
+  { href: '/customers', label: 'Clientes' },
+  { href: '/quotes', label: 'Orçamentos' },
+  { href: '/projects', label: 'Projetos' },
+  { href: '/financial', label: 'Financeiro' },
+  { href: '/service-catalog', label: 'Catálogo' },
   { href: '/users', label: 'Usuários' },
 ]
 
@@ -19,7 +23,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen bg-gray-50">
       <aside className="w-56 shrink-0 border-r border-gray-200 bg-white">
         <div className="flex h-16 items-center border-b border-gray-200 px-6">
-          <span className="text-lg font-bold text-gray-900">Manager</span>
+          <span className="text-lg font-bold text-gray-900">PPCI Manager</span>
         </div>
         <nav className="flex flex-col gap-1 p-4">
           {navItems.map((item) => {

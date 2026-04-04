@@ -2,7 +2,13 @@ import { LocalStorageToken } from '../storage/local-storage-token'
 import { createAxiosInstance } from '../http/axios-instance'
 import { AuthHttpRepository } from '../http/auth.http-repository'
 import { UserHttpRepository } from '../http/user.http-repository'
-import { ServiceHttpRepository } from '../http/service.http-repository'
+import { CustomerHttpRepository } from '../http/customer.http-repository'
+import { ServiceCatalogHttpRepository } from '../http/service-catalog.http-repository'
+import { QuoteHttpRepository } from '../http/quote.http-repository'
+import { ProjectHttpRepository } from '../http/project.http-repository'
+import { PaymentHttpRepository } from '../http/payment.http-repository'
+import { FixedCostHttpRepository } from '../http/fixed-cost.http-repository'
+import { FinancialHttpRepository } from '../http/financial.http-repository'
 import { LoginUseCase } from '../../application/use-cases/auth/login.use-case'
 import { RegisterUseCase } from '../../application/use-cases/auth/register.use-case'
 import { LogoutUseCase } from '../../application/use-cases/auth/logout.use-case'
@@ -11,10 +17,52 @@ import { GetUsersUseCase } from '../../application/use-cases/user/get-users.use-
 import { CreateUserUseCase } from '../../application/use-cases/user/create-user.use-case'
 import { UpdateUserUseCase } from '../../application/use-cases/user/update-user.use-case'
 import { DeleteUserUseCase } from '../../application/use-cases/user/delete-user.use-case'
-import { GetServicesUseCase } from '../../application/use-cases/service/get-services.use-case'
-import { CreateServiceUseCase } from '../../application/use-cases/service/create-service.use-case'
-import { UpdateServiceUseCase } from '../../application/use-cases/service/update-service.use-case'
-import { DeleteServiceUseCase } from '../../application/use-cases/service/delete-service.use-case'
+import {
+  GetCustomersUseCase,
+  GetCustomerUseCase,
+  CreateCustomerUseCase,
+  UpdateCustomerUseCase,
+  DeleteCustomerUseCase,
+} from '../../application/use-cases/customer/customer.use-cases'
+import {
+  GetServiceCatalogUseCase,
+  CreateServiceCatalogUseCase,
+  UpdateServiceCatalogUseCase,
+  DeactivateServiceUseCase,
+  AddServicePriceUseCase,
+} from '../../application/use-cases/service-catalog/service-catalog.use-cases'
+import {
+  GetQuotesUseCase,
+  GetQuoteUseCase,
+  CreateQuoteUseCase,
+  UpdateQuoteUseCase,
+  DeleteQuoteUseCase,
+  ApproveQuoteUseCase,
+} from '../../application/use-cases/quote/quote.use-cases'
+import {
+  GetProjectsUseCase,
+  GetProjectUseCase,
+  CreateProjectUseCase,
+  UpdateProjectUseCase,
+  AddProjectServiceUseCase,
+  UpdateProjectServiceUseCase,
+  RemoveProjectServiceUseCase,
+} from '../../application/use-cases/project/project.use-cases'
+import {
+  GetPaymentsUseCase,
+  CreatePaymentUseCase,
+  PayPaymentUseCase,
+} from '../../application/use-cases/payment/payment.use-cases'
+import {
+  GetFixedCostsUseCase,
+  CreateFixedCostUseCase,
+  UpdateFixedCostUseCase,
+  DeleteFixedCostUseCase,
+} from '../../application/use-cases/fixed-cost/fixed-cost.use-cases'
+import {
+  GetFinancialEntriesUseCase,
+  GetFinancialReportUseCase,
+} from '../../application/use-cases/financial/financial.use-cases'
 
 const tokenStorage = new LocalStorageToken()
 
@@ -28,7 +76,13 @@ const http = createAxiosInstance(tokenStorage, () => {
 authRepoRef.repo = new AuthHttpRepository(http)
 const authRepo = authRepoRef.repo
 const userRepo = new UserHttpRepository(http)
-const serviceRepo = new ServiceHttpRepository(http)
+const customerRepo = new CustomerHttpRepository(http)
+const serviceCatalogRepo = new ServiceCatalogHttpRepository(http)
+const quoteRepo = new QuoteHttpRepository(http)
+const projectRepo = new ProjectHttpRepository(http)
+const paymentRepo = new PaymentHttpRepository(http)
+const fixedCostRepo = new FixedCostHttpRepository(http)
+const financialRepo = new FinancialHttpRepository(http)
 
 export const container = {
   tokenStorage,
@@ -45,8 +99,56 @@ export const container = {
   updateUser: new UpdateUserUseCase(userRepo),
   deleteUser: new DeleteUserUseCase(userRepo),
 
-  service: new GetServicesUseCase(serviceRepo),
-  createService: new CreateServiceUseCase(serviceRepo),
-  updateService: new UpdateServiceUseCase(serviceRepo),
-  deleteService: new DeleteServiceUseCase(serviceRepo),
+  customers: {
+    list: new GetCustomersUseCase(customerRepo),
+    get: new GetCustomerUseCase(customerRepo),
+    create: new CreateCustomerUseCase(customerRepo),
+    update: new UpdateCustomerUseCase(customerRepo),
+    delete: new DeleteCustomerUseCase(customerRepo),
+  },
+
+  serviceCatalog: {
+    list: new GetServiceCatalogUseCase(serviceCatalogRepo),
+    create: new CreateServiceCatalogUseCase(serviceCatalogRepo),
+    update: new UpdateServiceCatalogUseCase(serviceCatalogRepo),
+    deactivate: new DeactivateServiceUseCase(serviceCatalogRepo),
+    addPrice: new AddServicePriceUseCase(serviceCatalogRepo),
+  },
+
+  quotes: {
+    list: new GetQuotesUseCase(quoteRepo),
+    get: new GetQuoteUseCase(quoteRepo),
+    create: new CreateQuoteUseCase(quoteRepo),
+    update: new UpdateQuoteUseCase(quoteRepo),
+    delete: new DeleteQuoteUseCase(quoteRepo),
+    approve: new ApproveQuoteUseCase(quoteRepo),
+  },
+
+  projects: {
+    list: new GetProjectsUseCase(projectRepo),
+    get: new GetProjectUseCase(projectRepo),
+    create: new CreateProjectUseCase(projectRepo),
+    update: new UpdateProjectUseCase(projectRepo),
+    addService: new AddProjectServiceUseCase(projectRepo),
+    updateService: new UpdateProjectServiceUseCase(projectRepo),
+    removeService: new RemoveProjectServiceUseCase(projectRepo),
+  },
+
+  payments: {
+    list: new GetPaymentsUseCase(paymentRepo),
+    create: new CreatePaymentUseCase(paymentRepo),
+    pay: new PayPaymentUseCase(paymentRepo),
+  },
+
+  fixedCosts: {
+    list: new GetFixedCostsUseCase(fixedCostRepo),
+    create: new CreateFixedCostUseCase(fixedCostRepo),
+    update: new UpdateFixedCostUseCase(fixedCostRepo),
+    delete: new DeleteFixedCostUseCase(fixedCostRepo),
+  },
+
+  financial: {
+    entries: new GetFinancialEntriesUseCase(financialRepo),
+    report: new GetFinancialReportUseCase(financialRepo),
+  },
 }

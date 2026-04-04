@@ -1,6 +1,6 @@
-# Manager Dashboard
+# PPCI Manager Dashboard
 
-Boilerplate production-ready para sistemas de gerenciamento interno com autenticação JWT, CRUD de usuários e serviços. Monorepo com Clean Architecture, deploy configurado e testes.
+Sistema de gestão interna para empresa de engenharia especializada em regularização de imóveis (PPCI/AVCB). Controla o ciclo completo — do orçamento ao recebimento — e o fluxo de caixa da empresa. Monorepo com Clean Architecture, deploy configurado e testes.
 
 ## Stack
 
@@ -12,6 +12,7 @@ Boilerplate production-ready para sistemas de gerenciamento interno com autentic
 | Domínio compartilhado | `supabase/functions/_shared/domain/` — entidades, VOs e exceções (TypeScript) |
 | Auth | JWT HS256 via `hono/jwt` + bcryptjs |
 | Validação | Zod (API e frontend) |
+| PDF | `@react-pdf/renderer` (frontend-side) |
 | Testes | Vitest |
 | Deploy API | Supabase |
 | Deploy Web | Vercel |
@@ -46,7 +47,7 @@ manager-dashboard/
 
 ### Domain compartilhado
 
-`supabase/functions/_shared/domain/` é a fonte única da verdade para entidades (`User`, `Service`), value objects (`Email`) e exceções. A Edge Function importa diretamente via path relativo (`../_shared/domain/`). O frontend (`apps/web`) resolve o alias `@manager/domain` apontando para o mesmo diretório via `tsconfig.json`.
+`supabase/functions/_shared/domain/` é a fonte única da verdade para entidades (`User`, `Customer`, `Quote`, `Project`, `Payment`, `ServiceCatalogItem`, `FixedCost`, `FinancialEntry`), value objects (`Email`) e exceções. A Edge Function importa diretamente via path relativo (`../_shared/domain/`). O frontend (`apps/web`) resolve o alias `@manager/domain` apontando para o mesmo diretório via `tsconfig.json`.
 
 ## Rodando localmente
 
@@ -130,14 +131,41 @@ Todos os endpoints (exceto auth) requerem header `Authorization: Bearer <token>`
 | GET | `/api/users/:id` | Sim | Busca usuário |
 | PATCH | `/api/users/:id` | Sim | Atualiza usuário |
 | DELETE | `/api/users/:id` | Sim | Remove usuário |
-| GET | `/api/services?limit=20&offset=0&status=` | Sim | Lista serviços paginada |
-| GET | `/api/services/stats` | Sim | Estatísticas dos serviços |
-| POST | `/api/services` | Sim | Cria serviço |
-| GET | `/api/services/:id` | Sim | Busca serviço |
-| PATCH | `/api/services/:id` | Sim | Atualiza serviço |
-| DELETE | `/api/services/:id` | Sim | Remove serviço |
+| GET | `/api/customers?limit=20&offset=0` | Sim | Lista clientes (exclui deleted) |
+| POST | `/api/customers` | Sim | Cria cliente |
+| GET | `/api/customers/:id` | Sim | Detalhe com orçamentos e projetos |
+| PUT | `/api/customers/:id` | Sim | Atualiza cliente |
+| DELETE | `/api/customers/:id` | Sim | Soft delete (seta deleted_at) |
+| GET | `/api/service-catalog` | Sim | Lista serviços agrupados por categoria |
+| GET | `/api/service-catalog/categories` | Sim | Lista categorias |
+| POST | `/api/service-catalog` | Sim | Cria serviço no catálogo |
+| PUT | `/api/service-catalog/:id` | Sim | Atualiza serviço |
+| DELETE | `/api/service-catalog/:id` | Sim | Inativa serviço (is_active = false) |
+| POST | `/api/service-catalog/:id/prices` | Sim | Adiciona novo preço (fecha anterior) |
+| GET | `/api/quotes?status=&customer_id=` | Sim | Lista orçamentos com filtros |
+| POST | `/api/quotes` | Sim | Cria orçamento com itens |
+| GET | `/api/quotes/:id` | Sim | Detalhe com itens |
+| PUT | `/api/quotes/:id` | Sim | Atualiza (apenas draft/sent) |
+| DELETE | `/api/quotes/:id` | Sim | Deleta (apenas draft) |
+| POST | `/api/quotes/:id/approve` | Sim | Aprova e cria projeto; retorna `{ project_id }` |
+| GET | `/api/projects?status=&customer_id=` | Sim | Lista projetos com filtros |
+| POST | `/api/projects` | Sim | Cria projeto diretamente (sem quote) |
+| GET | `/api/projects/:id` | Sim | Detalhe com serviços e pagamentos |
+| PUT | `/api/projects/:id` | Sim | Atualiza (bloqueado se finished) |
+| POST | `/api/projects/:id/services` | Sim | Adiciona serviço ao projeto |
+| PUT | `/api/project-services/:id` | Sim | Atualiza item de serviço |
+| DELETE | `/api/project-services/:id` | Sim | Remove item de serviço |
+| GET | `/api/payments?project_id=&status=` | Sim | Lista pagamentos |
+| POST | `/api/payments` | Sim | Cria pagamento |
+| PUT | `/api/payments/:id/pay` | Sim | Marca como pago; trigger cria financial_entry |
+| GET | `/api/fixed-costs` | Sim | Lista custos fixos ativos |
+| POST | `/api/fixed-costs` | Sim | Cria custo fixo |
+| PUT | `/api/fixed-costs/:id` | Sim | Atualiza custo fixo |
+| DELETE | `/api/fixed-costs/:id` | Sim | Remove custo fixo |
+| GET | `/api/financial/entries?type=&date_from=&date_to=` | Sim | Lista lançamentos financeiros |
+| GET | `/api/financial/report?date_from=&date_to=` | Sim | Relatório: receitas, custos, saldo |
 
-Respostas paginadas retornam `{ data/servicos, total, limit, offset }`.
+Respostas paginadas retornam `{ data, total, limit, offset }`.
 
 ## Deploy
 
@@ -164,4 +192,4 @@ npm run test -w @manager/web      # Apenas testes do web
 ```
 
 Cobertura atual:
-- `apps/web` — 8 testes unitários (LoginUseCase, GetServicesUseCase)
+- `apps/web` — testes unitários (LoginUseCase)

@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useServiceStats } from '../../presentation/hooks/useServices'
-import { useUsers } from '../../presentation/hooks/useUsers'
+import { useProjects } from '../../presentation/hooks/useProjects'
+import { useQuotes } from '../../presentation/hooks/useQuotes'
+import { useCustomers } from '../../presentation/hooks/useCustomers'
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
@@ -14,33 +15,44 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 }
 
 export default function DashboardPage() {
-  const { data: stats } = useServiceStats()
-  const { data: users = [] } = useUsers()
+  const { data: projectsData } = useProjects({ limit: 100 })
+  const { data: quotesData } = useQuotes({ limit: 100 })
+  const { data: customersData } = useCustomers({ limit: 100 })
+
+  const totalProjects = projectsData?.total ?? 0
+  const inProgressProjects = (projectsData?.projects ?? []).filter((p) => p.status === 'in_progress').length
+  const totalQuotes = quotesData?.total ?? 0
+  const totalCustomers = customersData?.total ?? 0
 
   return (
     <div className="flex flex-col gap-8">
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total de Serviços" value={stats?.total ?? 0} />
-        <StatCard label="Em Andamento" value={stats?.em_andamento ?? 0} />
-        <StatCard label="Concluídos" value={stats?.concluidos ?? 0} />
-        <StatCard label="Usuários" value={users.length} />
+        <StatCard label="Clientes" value={totalCustomers} />
+        <StatCard label="Projetos" value={totalProjects} />
+        <StatCard label="Em Andamento" value={inProgressProjects} />
+        <StatCard label="Orçamentos" value={totalQuotes} />
       </div>
-
 
       <div className="flex gap-4">
         <Link
-          href="/services"
+          href="/customers"
           className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
         >
-          Ver Serviços →
+          Ver Clientes →
         </Link>
         <Link
-          href="/users"
+          href="/projects"
           className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
         >
-          Ver Usuários →
+          Ver Projetos →
+        </Link>
+        <Link
+          href="/quotes"
+          className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+        >
+          Ver Orçamentos →
         </Link>
       </div>
     </div>
