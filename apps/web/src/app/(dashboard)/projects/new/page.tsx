@@ -19,7 +19,6 @@ export default function NewProjectPage() {
   const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [totalValue, setTotalValue] = useState('')
 
   const customers = customersData?.customers ?? []
   const customerOptions = customers.map((c) => ({ value: c.id, label: c.name }))
@@ -32,7 +31,7 @@ export default function NewProjectPage() {
       description: description || undefined,
       start_date: startDate || undefined,
       end_date: endDate || undefined,
-      total_value: totalValue ? parseFloat(totalValue) : undefined,
+      total_value: undefined,
     })
     router.push(`/projects/${project.id}`)
   }

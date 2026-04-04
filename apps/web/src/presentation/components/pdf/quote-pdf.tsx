@@ -227,6 +227,7 @@ export function QuotePDF({ quote, customerName, companyName = 'Empresa WS' }: Qu
         {/* Header */}
         <View style={styles.header}>
           <View>
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
             <Image style={styles.logo} src="/logo.png" />
             <Text style={styles.companyName}>{companyName}</Text>
             <Text style={styles.companySubtitle}>Proteção e Prevenção Contra Incêndio</Text>
