@@ -177,4 +177,18 @@ export const ProjectRepository = {
   async removeService(id: string): Promise<void> {
     await sql`DELETE FROM project_services WHERE id = ${id}`
   },
+
+  async delete(id: string): Promise<void> {
+    // Deleta financial_entries dos payments do projeto
+    await sql`
+      DELETE FROM financial_entries
+      WHERE source_type = 'payment'
+        AND source_id IN (SELECT id FROM payments WHERE project_id = ${id})
+    `
+    // Deleta os payments do projeto
+    await sql`DELETE FROM payments WHERE project_id = ${id}`
+    // project_services é deletado em cascata automaticamente (FK com ON DELETE CASCADE)
+    // Deleta o projeto
+    await sql`DELETE FROM projects WHERE id = ${id}`
+  },
 }

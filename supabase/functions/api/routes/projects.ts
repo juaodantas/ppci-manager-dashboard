@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth.ts'
 import { createProject } from '../use-cases/project/create-project.ts'
 import { getAllProjects, getProjectById } from '../use-cases/project/get-project.ts'
 import { updateProject } from '../use-cases/project/update-project.ts'
+import { deleteProject } from '../use-cases/project/delete-project.ts'
 import { addProjectService } from '../use-cases/project/add-project-service.ts'
 import { updateProjectService } from '../use-cases/project/update-project-service.ts'
 import { removeProjectService } from '../use-cases/project/remove-project-service.ts'
@@ -57,6 +58,17 @@ projects.put('/:id', async (c) => {
   try {
     const project = await updateProject(id, dto)
     return c.json(project)
+  } catch (err) {
+    if (err instanceof HttpError) return c.json({ error: err.message }, err.status)
+    throw err
+  }
+})
+
+projects.delete('/:id', async (c) => {
+  const id = c.req.param('id')
+  try {
+    await deleteProject(id)
+    return c.body(null, 204)
   } catch (err) {
     if (err instanceof HttpError) return c.json({ error: err.message }, err.status)
     throw err
