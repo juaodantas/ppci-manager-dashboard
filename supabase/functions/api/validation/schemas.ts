@@ -149,6 +149,23 @@ export const updateFixedCostSchema = z.object({
   category: z.string().optional(),
 })
 
+// Variable Cost
+export const createVariableCostSchema = z.object({
+  name: z.string().min(1, 'name is required'),
+  amount: z.number().positive(),
+  date: z.string().date(),
+  category: z.string().optional(),
+  description: z.string().optional(),
+})
+
+export const updateVariableCostSchema = z.object({
+  name: z.string().min(1).optional(),
+  amount: z.number().positive().optional(),
+  date: z.string().date().optional(),
+  category: z.string().optional(),
+  description: z.string().optional(),
+})
+
 // Types
 export type RefreshDto = z.infer<typeof refreshSchema>
 export type RegisterDto = z.infer<typeof registerSchema>
@@ -171,3 +188,5 @@ export type CreatePaymentDto = z.infer<typeof createPaymentSchema>
 export type PayPaymentDto = z.infer<typeof payPaymentSchema>
 export type CreateFixedCostDto = z.infer<typeof createFixedCostSchema>
 export type UpdateFixedCostDto = z.infer<typeof updateFixedCostSchema>
+export type CreateVariableCostDto = z.infer<typeof createVariableCostSchema>
+export type UpdateVariableCostDto = z.infer<typeof updateVariableCostSchema>

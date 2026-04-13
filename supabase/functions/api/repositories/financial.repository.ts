@@ -26,6 +26,7 @@ export const FinancialRepository = {
     const { type, date_from, date_to, limit, offset } = params
 
     // When a date range is provided, include fixed costs dynamically (one entry per month per active cost)
+    // and variable costs for the period.
     const rows = date_from && date_to
       ? await sql`
           SELECT *, COUNT(*) OVER()::int AS total_count
@@ -57,6 +58,21 @@ export const FinancialRepository = {
               '1 month'::interval
             ) AS gs
             WHERE fc.active = true
+              AND (${type ?? null}::text IS NULL OR 'expense' = ${type ?? null}::text)
+
+            UNION ALL
+
+            SELECT
+              vc.id,
+              'expense'           AS type,
+              'variable_cost'     AS source_type,
+              vc.id               AS source_id,
+              vc.amount::float,
+              vc.date,
+              COALESCE(vc.description, vc.name) AS description,
+              vc.created_at
+            FROM variable_costs vc
+            WHERE vc.date BETWEEN ${date_from}::date AND ${date_to}::date
               AND (${type ?? null}::text IS NULL OR 'expense' = ${type ?? null}::text)
           ) combined
           ORDER BY date DESC
@@ -91,6 +107,10 @@ export const FinancialRepository = {
           '1 month'::interval
         ) AS gs
         WHERE fc.active = true
+        UNION ALL
+        SELECT 'expense' AS type, vc.amount
+        FROM variable_costs vc
+        WHERE vc.date BETWEEN ${date_from}::date AND ${date_to}::date
       )
       SELECT
         COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0)::float  AS total_income,
@@ -118,6 +138,13 @@ export const FinancialRepository = {
           '1 month'::interval
         ) AS gs
         WHERE fc.active = true
+        UNION ALL
+        SELECT
+          'expense' AS type,
+          vc.amount,
+          vc.date
+        FROM variable_costs vc
+        WHERE vc.date BETWEEN ${date_from}::date AND ${date_to}::date
       )
       SELECT
         date_trunc('month', date)::date::text AS month,

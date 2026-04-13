@@ -1,5 +1,5 @@
 export type EntryType = 'income' | 'expense'
-export type EntrySourceType = 'payment' | 'fixed_cost'
+export type EntrySourceType = 'payment' | 'fixed_cost' | 'variable_cost'
 
 export interface FinancialEntry {
   id: string

@@ -8,6 +8,7 @@ import { quoteRoutes } from './routes/quotes.ts'
 import { projectRoutes, projectServiceRoutes } from './routes/projects.ts'
 import { paymentRoutes } from './routes/payments.ts'
 import { fixedCostRoutes } from './routes/fixed-costs.ts'
+import { variableCostRoutes } from './routes/variable-costs.ts'
 import { financialRoutes } from './routes/financial.ts'
 
 const functionName = 'api'
@@ -33,6 +34,7 @@ app.route('/projects', projectRoutes)
 app.route('/project-services', projectServiceRoutes)
 app.route('/payments', paymentRoutes)
 app.route('/fixed-costs', fixedCostRoutes)
+app.route('/variable-costs', variableCostRoutes)
 app.route('/financial', financialRoutes)
 
 app.onError((err, c) => {
