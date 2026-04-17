@@ -14,6 +14,7 @@ export class GetProjectsUseCase {
     offset: number
     status?: string
     customer_id?: string
+    search?: string
   }): Promise<{ projects: Project[]; total: number }> {
     return this.repo.findAll(params)
   }

@@ -1,9 +1,10 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '../../../presentation/components/ui/Button'
+import { Input } from '../../../presentation/components/ui/Input'
 import { Select } from '../../../presentation/components/ui/Select'
 import { useProjects } from '../../../presentation/hooks/useProjects'
 
@@ -32,10 +33,23 @@ function ProjectsContent() {
   const searchParams = useSearchParams()
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(0)
+  const [searchInput, setSearchInput] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const customer_id = searchParams.get('customer_id') ?? undefined
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim())
+    }, 400)
+    return () => clearTimeout(handler)
+  }, [searchInput])
+
   const { data, isLoading } = useProjects({
-    limit: PAGE_SIZE, offset: page * PAGE_SIZE, status: status || undefined, customer_id,
+    limit: PAGE_SIZE,
+    offset: page * PAGE_SIZE,
+    status: status || undefined,
+    customer_id,
+    search: debouncedSearch || undefined,
   })
 
   const projects = data?.projects ?? []
@@ -49,8 +63,21 @@ function ProjectsContent() {
         <Link href="/projects/new"><Button>Novo Projeto</Button></Link>
       </div>
 
-      <div className="w-48">
-        <Select options={STATUS_OPTIONS} value={status} onChange={(e) => { setStatus(e.target.value); setPage(0) }} />
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="w-full max-w-md">
+          <Input
+            label="Buscar por nome"
+            placeholder="Digite o nome do projeto"
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value)
+              setPage(0)
+            }}
+          />
+        </div>
+        <div className="w-48">
+          <Select options={STATUS_OPTIONS} value={status} onChange={(e) => { setStatus(e.target.value); setPage(0) }} />
+        </div>
       </div>
 
       {isLoading ? (

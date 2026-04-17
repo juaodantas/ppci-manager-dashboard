@@ -4,10 +4,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { container } from '../../infrastructure/di/container'
 import type { CreateCustomerDto, UpdateCustomerDto } from '../../domain/repositories/customer.repository'
 
-export function useCustomers(params?: { limit?: number; offset?: number }) {
+export function useCustomers(params?: { limit?: number; offset?: number; search?: string }) {
   return useQuery({
     queryKey: ['customers', params],
-    queryFn: () => container.customers.list.execute({ limit: params?.limit ?? 20, offset: params?.offset ?? 0 }),
+    queryFn: () =>
+      container.customers.list.execute({
+        limit: params?.limit ?? 20,
+        offset: params?.offset ?? 0,
+        search: params?.search,
+      }),
   })
 }
 

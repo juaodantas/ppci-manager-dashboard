@@ -24,7 +24,8 @@ projects.get('/', async (c) => {
   const offset = Number(c.req.query('offset') ?? 0)
   const status = c.req.query('status')
   const customer_id = c.req.query('customer_id')
-  const result = await getAllProjects({ limit, offset, status, customer_id })
+  const search = c.req.query('search') ?? undefined
+  const result = await getAllProjects({ limit, offset, status, customer_id, search })
   return c.json(result)
 })
 

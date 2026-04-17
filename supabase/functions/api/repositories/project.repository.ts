@@ -39,8 +39,10 @@ export const ProjectRepository = {
     offset: number
     status?: string
     customer_id?: string
+    search?: string
   }): Promise<{ projects: Project[]; total: number }> {
-    const { limit, offset, status, customer_id } = params
+    const { limit, offset, status, customer_id, search } = params
+    const query = search?.trim()
 
     const rows = await sql`
       SELECT *, COUNT(*) OVER()::int AS total_count
@@ -48,6 +50,7 @@ export const ProjectRepository = {
       WHERE
         (${status ?? null}::text IS NULL OR status = ${status ?? null}::project_status_enum)
         AND (${customer_id ?? null}::uuid IS NULL OR customer_id = ${customer_id ?? null}::uuid)
+        AND (${query ?? null}::text IS NULL OR name ILIKE ${`%${query ?? ''}%`})
       ORDER BY created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     `

@@ -8,7 +8,7 @@ import type {
 
 export class GetCustomersUseCase {
   constructor(private readonly repo: ICustomerRepository) {}
-  execute(params: { limit: number; offset: number }): Promise<{ customers: Customer[]; total: number }> {
+  execute(params: { limit: number; offset: number; search?: string }): Promise<{ customers: Customer[]; total: number }> {
     return this.repo.findAll(params)
   }
 }

@@ -14,6 +14,7 @@ export function useProjects(params?: {
   offset?: number
   status?: string
   customer_id?: string
+  search?: string
 }) {
   return useQuery({
     queryKey: ['projects', params],
@@ -23,6 +24,7 @@ export function useProjects(params?: {
         offset: params?.offset ?? 0,
         status: params?.status,
         customer_id: params?.customer_id,
+        search: params?.search,
       }),
   })
 }

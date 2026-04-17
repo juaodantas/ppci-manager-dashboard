@@ -38,6 +38,7 @@ export interface IProjectRepository {
     offset: number
     status?: string
     customer_id?: string
+    search?: string
   }): Promise<{ projects: Project[]; total: number }>
   findById(id: string): Promise<Project>
   create(data: CreateProjectDto): Promise<Project>

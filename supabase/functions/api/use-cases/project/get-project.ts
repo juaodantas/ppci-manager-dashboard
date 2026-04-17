@@ -7,6 +7,7 @@ export async function getAllProjects(params: {
   offset: number
   status?: string
   customer_id?: string
+  search?: string
 }): Promise<{ projects: Project[]; total: number }> {
   return ProjectRepository.findAll(params)
 }

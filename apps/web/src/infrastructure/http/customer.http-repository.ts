@@ -10,7 +10,7 @@ import type {
 export class CustomerHttpRepository implements ICustomerRepository {
   constructor(private readonly http: AxiosInstance) {}
 
-  async findAll(params: { limit: number; offset: number }): Promise<{ customers: Customer[]; total: number }> {
+  async findAll(params: { limit: number; offset: number; search?: string }): Promise<{ customers: Customer[]; total: number }> {
     const { data } = await this.http.get<{
       data: Customer[]
       total: number

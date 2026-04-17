@@ -44,14 +44,24 @@ export interface UpdateCustomerData {
 }
 
 export const CustomerRepository = {
-  async findAll(limit: number, offset: number): Promise<{ customers: Customer[]; total: number }> {
-    const rows = await sql`
-      SELECT *, COUNT(*) OVER()::int AS total_count
-      FROM customers
-      WHERE deleted_at IS NULL
-      ORDER BY created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `
+  async findAll(limit: number, offset: number, search?: string): Promise<{ customers: Customer[]; total: number }> {
+    const query = search?.trim()
+    const rows = query
+      ? await sql`
+        SELECT *, COUNT(*) OVER()::int AS total_count
+        FROM customers
+        WHERE deleted_at IS NULL
+          AND name ILIKE ${`%${query}%`}
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+      : await sql`
+        SELECT *, COUNT(*) OVER()::int AS total_count
+        FROM customers
+        WHERE deleted_at IS NULL
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
     const total = rows.length > 0 ? (rows[0].total_count as number) : 0
     return { customers: rows.map(toCustomer), total }
   },

@@ -23,6 +23,7 @@ export interface ICustomerRepository {
   findAll(params: {
     limit: number
     offset: number
+    search?: string
   }): Promise<{ customers: Customer[]; total: number }>
   findById(id: string): Promise<CustomerWithCounts>
   create(data: CreateCustomerDto): Promise<Customer>

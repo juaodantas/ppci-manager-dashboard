@@ -16,6 +16,7 @@ export class ProjectHttpRepository implements IProjectRepository {
     offset: number
     status?: string
     customer_id?: string
+    search?: string
   }): Promise<{ projects: Project[]; total: number }> {
     const { data } = await this.http.get<{ projects: Project[]; total: number }>('/projects', { params })
     return data

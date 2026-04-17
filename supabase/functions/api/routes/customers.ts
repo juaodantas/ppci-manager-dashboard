@@ -14,7 +14,8 @@ customers.use('*', authMiddleware)
 customers.get('/', async (c) => {
   const limit = Math.min(Number(c.req.query('limit') ?? 20), 100)
   const offset = Number(c.req.query('offset') ?? 0)
-  const result = await getAllCustomers(limit, offset)
+  const search = c.req.query('search') ?? undefined
+  const result = await getAllCustomers(limit, offset, search)
   return c.json(result)
 })
 
