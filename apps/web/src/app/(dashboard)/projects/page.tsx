@@ -44,7 +44,7 @@ function ProjectsContent() {
     return () => clearTimeout(handler)
   }, [searchInput])
 
-  const { data, isLoading } = useProjects({
+  const { data, isLoading, isFetching } = useProjects({
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
     status: status || undefined,
@@ -78,24 +78,29 @@ function ProjectsContent() {
         <div className="w-48">
           <Select options={STATUS_OPTIONS} value={status} onChange={(e) => { setStatus(e.target.value); setPage(0) }} />
         </div>
+        {isFetching && (
+          <span className="text-sm text-gray-400">Atualizando...</span>
+        )}
       </div>
 
-      {isLoading ? (
-        <div className="py-12 text-center text-gray-500">Carregando...</div>
-      ) : (
-        <>
-          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nome</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Início</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Valor Total</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nome</th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Início</th>
+              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Valor Total</th>
+              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {isLoading ? (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-gray-400">Carregando...</td>
+              </tr>
+            ) : (
+              <>
                 {projects.length === 0 && (
                   <tr><td colSpan={5} className="py-8 text-center text-gray-400">Nenhum projeto encontrado</td></tr>
                 )}
@@ -120,20 +125,20 @@ function ProjectsContent() {
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-          {total > PAGE_SIZE && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">{offset + 1}–{Math.min(offset + PAGE_SIZE, total)} de {total}</span>
-              <div className="flex gap-2">
-                <Button variant="secondary" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Anterior</Button>
-                <Button variant="secondary" disabled={offset + PAGE_SIZE >= total} onClick={() => setPage((p) => p + 1)}>Próxima</Button>
-              </div>
-            </div>
-          )}
-        </>
+      {!isLoading && total > PAGE_SIZE && (
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-600">{offset + 1}–{Math.min(offset + PAGE_SIZE, total)} de {total}</span>
+          <div className="flex gap-2">
+            <Button variant="secondary" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Anterior</Button>
+            <Button variant="secondary" disabled={offset + PAGE_SIZE >= total} onClick={() => setPage((p) => p + 1)}>Próxima</Button>
+          </div>
+        </div>
       )}
     </div>
   )

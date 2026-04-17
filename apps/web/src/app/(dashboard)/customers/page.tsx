@@ -65,7 +65,7 @@ export default function CustomersPage() {
     return () => clearTimeout(handler)
   }, [searchInput])
 
-  const { data, isLoading } = useCustomers({
+  const { data, isLoading, isFetching } = useCustomers({
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
     search: debouncedSearch || undefined,
@@ -100,34 +100,39 @@ export default function CustomersPage() {
         <Button onClick={() => setModalOpen(true)}>Novo Cliente</Button>
       </div>
 
-      {isLoading ? (
-        <div className="py-12 text-center text-gray-500">Carregando...</div>
-      ) : (
-        <>
-          <div className="flex items-end justify-between gap-4">
-            <div className="w-full max-w-md">
-              <Input
-                label="Buscar por nome"
-                placeholder="Digite o nome do cliente"
-                value={searchInput}
-                onChange={(e) => {
-                  setSearchInput(e.target.value)
-                  setPage(0)
-                }}
-              />
-            </div>
-          </div>
-          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nome</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Contato</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">CPF/CNPJ</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+      <div className="flex items-end justify-between gap-4">
+        <div className="w-full max-w-md">
+          <Input
+            label="Buscar por nome"
+            placeholder="Digite o nome do cliente"
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value)
+              setPage(0)
+            }}
+          />
+        </div>
+        {isFetching && (
+          <span className="text-sm text-gray-400">Atualizando...</span>
+        )}
+      </div>
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nome</th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Contato</th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">CPF/CNPJ</th>
+              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {isLoading ? (
+              <tr>
+                <td colSpan={4} className="py-8 text-center text-gray-400">Carregando...</td>
+              </tr>
+            ) : (
+              <>
                 {customers.length === 0 && (
                   <tr>
                     <td colSpan={4} className="py-8 text-center text-gray-400">Nenhum cliente encontrado</td>
@@ -148,20 +153,20 @@ export default function CustomersPage() {
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-          {total > PAGE_SIZE && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">{offset + 1}–{Math.min(offset + PAGE_SIZE, total)} de {total}</span>
-              <div className="flex gap-2">
-                <Button variant="secondary" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Anterior</Button>
-                <Button variant="secondary" disabled={offset + PAGE_SIZE >= total} onClick={() => setPage((p) => p + 1)}>Próxima</Button>
-              </div>
-            </div>
-          )}
-        </>
+      {!isLoading && total > PAGE_SIZE && (
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-600">{offset + 1}–{Math.min(offset + PAGE_SIZE, total)} de {total}</span>
+          <div className="flex gap-2">
+            <Button variant="secondary" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Anterior</Button>
+            <Button variant="secondary" disabled={offset + PAGE_SIZE >= total} onClick={() => setPage((p) => p + 1)}>Próxima</Button>
+          </div>
+        </div>
       )}
 
       <Modal

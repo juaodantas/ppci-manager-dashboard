@@ -13,6 +13,8 @@ export function useCustomers(params?: { limit?: number; offset?: number; search?
         offset: params?.offset ?? 0,
         search: params?.search,
       }),
+    keepPreviousData: true,
+    staleTime: 10_000,
   })
 }
 

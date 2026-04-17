@@ -26,6 +26,8 @@ export function useProjects(params?: {
         customer_id: params?.customer_id,
         search: params?.search,
       }),
+    keepPreviousData: true,
+    staleTime: 10_000,
   })
 }
 
