@@ -1,4 +1,4 @@
-export type ProjectStatus = 'planning' | 'in_progress' | 'finished' | 'canceled'
+export type ProjectStatus = 'planning' | 'in_progress' | 'finished' | 'finished_pending_payment' | 'canceled'
 
 export interface ProjectService {
   id: string

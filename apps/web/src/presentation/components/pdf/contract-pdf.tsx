@@ -197,6 +197,7 @@ const STATUS_LABELS: Record<string, string> = {
   planning: 'Planejamento',
   in_progress: 'Em andamento',
   finished: 'Concluído',
+  finished_pending_payment: 'Concluído - Pagamento Pendente',
   canceled: 'Cancelado',
 }
 

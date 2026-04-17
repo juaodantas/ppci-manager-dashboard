@@ -13,7 +13,7 @@ export interface CreateProjectDto {
 export interface UpdateProjectDto {
   name?: string
   description?: string
-  status?: 'planning' | 'in_progress' | 'finished' | 'canceled'
+  status?: 'planning' | 'in_progress' | 'finished' | 'finished_pending_payment' | 'canceled'
   start_date?: string
   end_date?: string
   total_value?: number

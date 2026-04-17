@@ -15,6 +15,7 @@ const STATUS_OPTIONS = [
   { value: 'planning', label: 'Planejamento' },
   { value: 'in_progress', label: 'Em andamento' },
   { value: 'finished', label: 'Concluído' },
+  { value: 'finished_pending_payment', label: 'Concluído - Pagamento Pendente' },
   { value: 'canceled', label: 'Cancelado' },
 ]
 
@@ -22,11 +23,16 @@ const STATUS_COLORS: Record<string, string> = {
   planning: 'bg-yellow-100 text-yellow-700',
   in_progress: 'bg-blue-100 text-blue-700',
   finished: 'bg-green-100 text-green-700',
+  finished_pending_payment: 'bg-amber-100 text-amber-700',
   canceled: 'bg-gray-100 text-gray-500',
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  planning: 'Planejamento', in_progress: 'Em andamento', finished: 'Concluído', canceled: 'Cancelado',
+  planning: 'Planejamento',
+  in_progress: 'Em andamento',
+  finished: 'Concluído',
+  finished_pending_payment: 'Concluído - Pagamento Pendente',
+  canceled: 'Cancelado',
 }
 
 function ProjectsContent() {
