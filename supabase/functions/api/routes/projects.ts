@@ -5,6 +5,7 @@ import { getAllProjects, getProjectById } from '../use-cases/project/get-project
 import { updateProject } from '../use-cases/project/update-project.ts'
 import { deleteProject } from '../use-cases/project/delete-project.ts'
 import { addProjectService } from '../use-cases/project/add-project-service.ts'
+import { addProjectTax } from '../use-cases/project/add-project-tax.ts'
 import { updateProjectService } from '../use-cases/project/update-project-service.ts'
 import { removeProjectService } from '../use-cases/project/remove-project-service.ts'
 import { HttpError } from '../errors.ts'
@@ -14,7 +15,10 @@ import {
   updateProjectSchema,
   addProjectServiceSchema,
   updateProjectServiceSchema,
+  addProjectTaxSchema,
+  issueProjectTaxSchema,
 } from '../validation/schemas.ts'
+import { issueProjectTax } from '../use-cases/project/issue-project-tax.ts'
 
 const projects = new Hono()
 projects.use('*', authMiddleware)
@@ -89,6 +93,19 @@ projects.post('/:id/services', async (c) => {
   }
 })
 
+projects.post('/:id/taxes', async (c) => {
+  const id = c.req.param('id')
+  const body = await c.req.json()
+  const dto = validateBody(addProjectTaxSchema, body)
+  try {
+    const service = await addProjectTax(id, dto)
+    return c.json(service, 201)
+  } catch (err) {
+    if (err instanceof HttpError) return c.json({ error: err.message }, err.status)
+    throw err
+  }
+})
+
 // project-services endpoints (mounted at /projects for simplicity, matches tasks spec)
 const projectServices = new Hono()
 projectServices.use('*', authMiddleware)
@@ -99,6 +116,22 @@ projectServices.put('/:id', async (c) => {
   const dto = validateBody(updateProjectServiceSchema, body)
   try {
     const service = await updateProjectService(id, dto)
+    return c.json(service)
+  } catch (err) {
+    if (err instanceof HttpError) return c.json({ error: err.message }, err.status)
+    throw err
+  }
+})
+
+projectServices.post('/:id/issue', async (c) => {
+  const id = c.req.param('id')
+  const body = await c.req.json()
+  const dto = validateBody(issueProjectTaxSchema, body)
+  const projectId = c.req.query('project_id')
+  if (!projectId) return c.json({ error: 'project_id is required' }, 400)
+
+  try {
+    const service = await issueProjectTax(projectId, id, dto)
     return c.json(service)
   } catch (err) {
     if (err instanceof HttpError) return c.json({ error: err.message }, err.status)

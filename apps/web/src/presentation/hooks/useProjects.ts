@@ -7,6 +7,8 @@ import type {
   UpdateProjectDto,
   AddProjectServiceDto,
   UpdateProjectServiceDto,
+  AddProjectTaxDto,
+  IssueProjectTaxDto,
 } from '../../domain/repositories/project.repository'
 
 export function useProjects(params?: {
@@ -82,6 +84,24 @@ export function useRemoveProjectService() {
   return useMutation({
     mutationFn: ({ id, projectId: _pid }: { id: string; projectId: string }) =>
       container.projects.removeService.execute(id),
+    onSuccess: (_data, { projectId }) => qc.invalidateQueries({ queryKey: ['projects', projectId] }),
+  })
+}
+
+export function useAddProjectTax() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ projectId, dto }: { projectId: string; dto: AddProjectTaxDto }) =>
+      container.projects.addTax.execute(projectId, dto),
+    onSuccess: (_data, { projectId }) => qc.invalidateQueries({ queryKey: ['projects', projectId] }),
+  })
+}
+
+export function useIssueProjectTax() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ serviceId, projectId, dto }: { serviceId: string; projectId: string; dto: IssueProjectTaxDto }) =>
+      container.projects.issueTax.execute(serviceId, projectId, dto),
     onSuccess: (_data, { projectId }) => qc.invalidateQueries({ queryKey: ['projects', projectId] }),
   })
 }

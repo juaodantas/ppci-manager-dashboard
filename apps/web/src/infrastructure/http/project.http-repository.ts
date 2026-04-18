@@ -6,6 +6,8 @@ import type {
   UpdateProjectDto,
   AddProjectServiceDto,
   UpdateProjectServiceDto,
+  AddProjectTaxDto,
+  IssueProjectTaxDto,
 } from '../../domain/repositories/project.repository'
 
 export class ProjectHttpRepository implements IProjectRepository {
@@ -49,6 +51,20 @@ export class ProjectHttpRepository implements IProjectRepository {
 
   async removeService(id: string): Promise<void> {
     await this.http.delete(`/project-services/${id}`)
+  }
+
+  async addTax(projectId: string, body: AddProjectTaxDto): Promise<ProjectService> {
+    const { data } = await this.http.post<ProjectService>(`/projects/${projectId}/taxes`, body)
+    return data
+  }
+
+  async issueTax(serviceId: string, projectId: string, body: IssueProjectTaxDto): Promise<ProjectService> {
+    const { data } = await this.http.post<ProjectService>(
+      `/project-services/${serviceId}/issue`,
+      body,
+      { params: { project_id: projectId } },
+    )
+    return data
   }
 
   async delete(id: string): Promise<void> {

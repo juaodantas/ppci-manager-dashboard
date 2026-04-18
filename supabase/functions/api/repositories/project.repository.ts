@@ -12,6 +12,10 @@ function toProjectService(row: Record<string, any>): ProjectService {
     quantity: Number(row.quantity),
     unit_price: Number(row.unit_price),
     total_price: Number(row.total_price),
+    service_type: row.service_type ?? undefined,
+    tax_status: row.tax_status ?? null,
+    tax_issued_at: row.tax_issued_at ?? null,
+    tax_variable_cost_id: row.tax_variable_cost_id ?? null,
   }
 }
 
@@ -73,6 +77,26 @@ export const ProjectRepository = {
     const services = serviceRows.map(toProjectService)
 
     return toProject(rows[0], services)
+  },
+
+  async findServiceById(id: string): Promise<ProjectService | null> {
+    const rows = await sql`
+      SELECT ps.*, sc.name AS service_name
+      FROM project_services ps
+      JOIN services sc ON sc.id = ps.service_id
+      WHERE ps.id = ${id}
+    `
+    return rows.length > 0 ? toProjectService(rows[0]) : null
+  },
+
+  async findInternalTaxServiceId(): Promise<string | null> {
+    const rows = await sql`
+      SELECT id FROM services
+      WHERE name = 'Imposto interno'
+      ORDER BY id
+      LIMIT 1
+    `
+    return rows.length > 0 ? (rows[0].id as string) : null
   },
 
   async save(data: {
@@ -141,15 +165,19 @@ export const ProjectRepository = {
     quantity: number
     unit_price: number
     description?: string
+    service_type?: 'service' | 'tax_deduction'
+    tax_status?: 'not_issued' | 'issued'
   }): Promise<ProjectService> {
     const rows = await sql`
-      INSERT INTO project_services (project_id, service_id, quantity, unit_price, description)
+      INSERT INTO project_services (project_id, service_id, quantity, unit_price, description, service_type, tax_status)
       VALUES (
         ${data.project_id},
         ${data.service_id},
         ${data.quantity},
         ${data.unit_price},
-        ${data.description ?? null}
+        ${data.description ?? null},
+        ${data.service_type ?? 'service'}::project_service_type_enum,
+        ${data.tax_status ?? null}::project_tax_status_enum
       )
       RETURNING *
     `
@@ -162,6 +190,9 @@ export const ProjectRepository = {
       quantity?: number
       unit_price?: number
       description?: string
+      tax_status?: 'not_issued' | 'issued'
+      tax_issued_at?: string
+      tax_variable_cost_id?: string
     },
   ): Promise<ProjectService | null> {
     const rows = await sql`
@@ -170,6 +201,9 @@ export const ProjectRepository = {
         quantity    = COALESCE(${data.quantity ?? null}::numeric, quantity),
         unit_price  = COALESCE(${data.unit_price ?? null}::numeric, unit_price),
         description = COALESCE(${data.description ?? null}, description),
+        tax_status  = COALESCE(${data.tax_status ?? null}::project_tax_status_enum, tax_status),
+        tax_issued_at = COALESCE(${data.tax_issued_at ?? null}::date, tax_issued_at),
+        tax_variable_cost_id = COALESCE(${data.tax_variable_cost_id ?? null}::uuid, tax_variable_cost_id),
         updated_at  = now()
       WHERE id = ${id}
       RETURNING *

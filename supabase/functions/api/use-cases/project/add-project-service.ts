@@ -16,5 +16,7 @@ export async function addProjectService(
     quantity: dto.quantity,
     unit_price: dto.unit_price,
     description: dto.description,
+    service_type: dto.service_type,
+    tax_status: dto.service_type === 'tax_deduction' ? 'not_issued' : undefined,
   })
 }

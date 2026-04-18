@@ -5,6 +5,8 @@ import type {
   UpdateProjectDto,
   AddProjectServiceDto,
   UpdateProjectServiceDto,
+  AddProjectTaxDto,
+  IssueProjectTaxDto,
 } from '../../../domain/repositories/project.repository'
 
 export class GetProjectsUseCase {
@@ -59,6 +61,20 @@ export class RemoveProjectServiceUseCase {
   constructor(private readonly repo: IProjectRepository) {}
   execute(id: string): Promise<void> {
     return this.repo.removeService(id)
+  }
+}
+
+export class AddProjectTaxUseCase {
+  constructor(private readonly repo: IProjectRepository) {}
+  execute(projectId: string, data: AddProjectTaxDto): Promise<ProjectService> {
+    return this.repo.addTax(projectId, data)
+  }
+}
+
+export class IssueProjectTaxUseCase {
+  constructor(private readonly repo: IProjectRepository) {}
+  execute(serviceId: string, projectId: string, data: IssueProjectTaxDto): Promise<ProjectService> {
+    return this.repo.issueTax(serviceId, projectId, data)
   }
 }
 

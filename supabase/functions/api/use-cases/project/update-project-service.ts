@@ -11,6 +11,9 @@ export async function updateProjectService(
     quantity: dto.quantity,
     unit_price: dto.unit_price,
     description: dto.description,
+    tax_status: dto.tax_status,
+    tax_issued_at: dto.tax_issued_at,
+    tax_variable_cost_id: dto.tax_variable_cost_id,
   })
   if (!updated) throw notFound('ProjectService', id)
   return updated

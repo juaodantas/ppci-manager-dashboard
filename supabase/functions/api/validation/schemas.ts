@@ -117,9 +117,23 @@ export const addProjectServiceSchema = z.object({
   quantity: z.number().positive(),
   unit_price: z.number().positive(),
   description: z.string().optional(),
+  service_type: z.enum(['service', 'tax_deduction']).optional(),
 })
 
-export const updateProjectServiceSchema = addProjectServiceSchema.partial()
+export const updateProjectServiceSchema = addProjectServiceSchema.partial().extend({
+  tax_status: z.enum(['not_issued', 'issued']).optional(),
+  tax_issued_at: z.string().date().optional(),
+  tax_variable_cost_id: z.string().uuid().optional(),
+})
+
+export const addProjectTaxSchema = z.object({
+  amount: z.number().positive(),
+  description: z.string().optional(),
+})
+
+export const issueProjectTaxSchema = z.object({
+  issue_date: z.string().date(),
+})
 
 // Payment
 export const createPaymentSchema = z.object({
@@ -184,6 +198,8 @@ export type CreateProjectDto = z.infer<typeof createProjectSchema>
 export type UpdateProjectDto = z.infer<typeof updateProjectSchema>
 export type AddProjectServiceDto = z.infer<typeof addProjectServiceSchema>
 export type UpdateProjectServiceDto = z.infer<typeof updateProjectServiceSchema>
+export type AddProjectTaxDto = z.infer<typeof addProjectTaxSchema>
+export type IssueProjectTaxDto = z.infer<typeof issueProjectTaxSchema>
 export type CreatePaymentDto = z.infer<typeof createPaymentSchema>
 export type PayPaymentDto = z.infer<typeof payPaymentSchema>
 export type CreateFixedCostDto = z.infer<typeof createFixedCostSchema>

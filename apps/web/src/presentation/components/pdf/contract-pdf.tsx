@@ -214,7 +214,7 @@ export function ContractPDF({
   payments,
   companyName = 'Empresa WS',
 }: ContractPDFProps) {
-  const services = project.services ?? []
+  const services = (project.services ?? []).filter((svc) => svc.service_type !== 'tax_deduction')
   const totalServices = services.reduce((s, i) => s + i.total_price, 0)
 
   return (

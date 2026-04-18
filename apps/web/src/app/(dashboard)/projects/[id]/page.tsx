@@ -5,7 +5,15 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import type { ProjectService } from '@manager/domain'
-import { useProject, useUpdateProject, useAddProjectService, useRemoveProjectService, useDeleteProject } from '../../../../presentation/hooks/useProjects'
+import {
+  useProject,
+  useUpdateProject,
+  useAddProjectService,
+  useRemoveProjectService,
+  useDeleteProject,
+  useAddProjectTax,
+  useIssueProjectTax,
+} from '../../../../presentation/hooks/useProjects'
 import { usePayments, useCreatePayment, usePayPayment } from '../../../../presentation/hooks/usePayments'
 import { useServiceCatalog } from '../../../../presentation/hooks/useServiceCatalog'
 import { useCustomer } from '../../../../presentation/hooks/useCustomers'
@@ -52,6 +60,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const { data: customer } = useCustomer(project?.customer_id ?? '')
   const updateProject = useUpdateProject()
   const addService = useAddProjectService()
+  const addTax = useAddProjectTax()
+  const issueTax = useIssueProjectTax()
   const removeService = useRemoveProjectService()
   const deleteProject = useDeleteProject()
   const createPayment = useCreatePayment()
@@ -59,6 +69,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const [tab, setTab] = useState<'services' | 'payments'>('services')
   const [addServiceOpen, setAddServiceOpen] = useState(false)
+  const [addTaxOpen, setAddTaxOpen] = useState(false)
   const [addPaymentOpen, setAddPaymentOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [newStatus, setNewStatus] = useState('')
@@ -76,6 +87,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [svcPrice, setSvcPrice] = useState('')
   const [svcDesc, setSvcDesc] = useState('')
 
+  // tax form
+  const [taxAmount, setTaxAmount] = useState('')
+  const [taxDesc, setTaxDesc] = useState('')
+
   // payment form
   const [pmtAmount, setPmtAmount] = useState('')
   const [pmtDueDate, setPmtDueDate] = useState('')
@@ -87,11 +102,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [payingId, setPayingId] = useState('')
   const [paidDate, setPaidDate] = useState('')
 
+  // issue tax modal
+  const [issueTaxOpen, setIssueTaxOpen] = useState(false)
+  const [issuingTaxId, setIssuingTaxId] = useState('')
+  const [issueDate, setIssueDate] = useState('')
+
   if (isLoading) return <div className="py-12 text-center text-gray-500">Carregando...</div>
   if (!project) return <div className="py-12 text-center text-gray-500">Projeto não encontrado</div>
 
   const isFinished = project.status === 'finished'
   const services = project.services ?? []
+  const taxServices = services.filter((svc) => svc.service_type === 'tax_deduction')
+  const regularServices = services.filter((svc) => svc.service_type !== 'tax_deduction')
   const payments = paymentsData?.payments ?? []
   const serviceOptions = (catalog ?? []).map((s) => ({ value: s.id, label: `${s.name} (${s.category.name})` }))
   const customerName = customer?.name ?? project.customer_id
@@ -144,6 +166,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     setSvcServiceId(''); setSvcQty('1'); setSvcPrice(''); setSvcDesc('')
   }
 
+  const handleAddTax = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await addTax.mutateAsync({
+      projectId: id,
+      dto: {
+        amount: parseFloat(taxAmount),
+        description: taxDesc || undefined,
+      },
+    })
+    setAddTaxOpen(false)
+    setTaxAmount(''); setTaxDesc('')
+  }
+
   const handleAddPayment = async (e: React.FormEvent) => {
     e.preventDefault()
     const dto: CreatePaymentDto = {
@@ -162,6 +197,24 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     setPayingId(paymentId)
     setPaidDate(new Date().toISOString().slice(0, 10))
     setPayModalOpen(true)
+  }
+
+  const handleOpenIssueTax = (serviceId: string) => {
+    setIssuingTaxId(serviceId)
+    setIssueDate(new Date().toISOString().slice(0, 10))
+    setIssueTaxOpen(true)
+  }
+
+  const handleConfirmIssueTax = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await issueTax.mutateAsync({
+      serviceId: issuingTaxId,
+      projectId: id,
+      dto: { issue_date: issueDate },
+    })
+    setIssueTaxOpen(false)
+    setIssuingTaxId('')
+    setIssueDate('')
   }
 
   const handleConfirmPay = async (e: React.FormEvent) => {
@@ -242,7 +295,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       {tab === 'services' && (
         <div className="flex flex-col gap-4">
           {!isFinished && (
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setAddTaxOpen(true)}>+ Adicionar Imposto</Button>
               <Button size="sm" onClick={() => setAddServiceOpen(true)}>+ Adicionar Serviço</Button>
             </div>
           )}
@@ -261,7 +315,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 {services.length === 0 && (
                   <tr><td colSpan={5} className="py-6 text-center text-gray-400">Nenhum serviço adicionado</td></tr>
                 )}
-                {services.map((svc: ProjectService) => (
+                {regularServices.map((svc: ProjectService) => (
                   <tr key={svc.id}>
                     <td className="px-6 py-4 text-sm text-gray-900">
                       <span className="font-medium">{svc.service_name}</span>
@@ -277,6 +331,50 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     )}
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Imposto</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Valor</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+                  {!isFinished && <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Ações</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {taxServices.length === 0 && (
+                  <tr><td colSpan={4} className="py-6 text-center text-gray-400">Nenhum imposto lançado</td></tr>
+                )}
+                {taxServices.map((svc) => {
+                  const issued = svc.tax_status === 'issued'
+                  return (
+                    <tr key={svc.id}>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        <span className="font-medium">Imposto interno</span>
+                        {svc.description && <span className="ml-2 text-gray-500">— {svc.description}</span>}
+                      </td>
+                      <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">
+                        {svc.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${issued ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {issued ? 'Emitido' : 'Não emitido'}
+                        </span>
+                      </td>
+                      {!isFinished && (
+                        <td className="px-6 py-4 text-right">
+                          {!issued && (
+                            <Button size="sm" onClick={() => handleOpenIssueTax(svc.id)}>Emitir nota</Button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -334,6 +432,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </form>
       </Modal>
 
+      <Modal open={issueTaxOpen} title="Emitir Nota do Imposto" onClose={() => setIssueTaxOpen(false)}>
+        <form onSubmit={handleConfirmIssueTax} className="flex flex-col gap-4">
+          <Input label="Data da Emissão *" type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} required />
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setIssueTaxOpen(false)}>Cancelar</Button>
+            <Button type="submit" loading={issueTax.isPending}>Confirmar</Button>
+          </div>
+        </form>
+      </Modal>
+
       <Modal open={editOpen} title="Editar Projeto" onClose={() => setEditOpen(false)}>
         <form onSubmit={handleSaveEdit} className="flex flex-col gap-4">
           <Input label="Nome *" value={editName} onChange={(e) => setEditName(e.target.value)} required />
@@ -358,6 +466,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => setAddServiceOpen(false)}>Cancelar</Button>
             <Button type="submit" loading={addService.isPending}>Adicionar</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={addTaxOpen} title="Adicionar Imposto" onClose={() => setAddTaxOpen(false)}>
+        <form onSubmit={handleAddTax} className="flex flex-col gap-4">
+          <Input label="Valor do imposto *" type="number" min="0.01" step="0.01" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} required />
+          <Input label="Descrição" value={taxDesc} onChange={(e) => setTaxDesc(e.target.value)} />
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setAddTaxOpen(false)}>Cancelar</Button>
+            <Button type="submit" loading={addTax.isPending}>Adicionar</Button>
           </div>
         </form>
       </Modal>

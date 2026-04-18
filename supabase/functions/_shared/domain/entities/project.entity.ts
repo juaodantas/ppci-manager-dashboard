@@ -1,5 +1,8 @@
 export type ProjectStatus = 'planning' | 'in_progress' | 'finished' | 'finished_pending_payment' | 'canceled'
 
+export type ProjectServiceType = 'service' | 'tax_deduction'
+export type ProjectTaxStatus = 'not_issued' | 'issued'
+
 export interface ProjectService {
   id: string
   project_id: string
@@ -9,6 +12,10 @@ export interface ProjectService {
   quantity: number
   unit_price: number
   total_price: number
+  service_type?: ProjectServiceType
+  tax_status?: ProjectTaxStatus | null
+  tax_issued_at?: string | null
+  tax_variable_cost_id?: string | null
 }
 
 export interface Project {

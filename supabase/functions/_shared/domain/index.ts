@@ -10,6 +10,8 @@ export {
 export { type QuoteStatus, type QuoteItem, type Quote } from './entities/quote.entity.ts'
 export {
   type ProjectStatus,
+  type ProjectServiceType,
+  type ProjectTaxStatus,
   type ProjectService,
   type Project,
 } from './entities/project.entity.ts'
