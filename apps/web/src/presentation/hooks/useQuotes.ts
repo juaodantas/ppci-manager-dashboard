@@ -1,11 +1,18 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { UseQueryResult } from '@tanstack/react-query'
+import type { Quote } from '@manager/domain'
 import { container } from '../../infrastructure/di/container'
 import type { CreateQuoteDto, UpdateQuoteDto, ApproveQuoteDto } from '../../domain/repositories/quote.repository'
 
+type QuotesListResult = {
+  quotes: Quote[]
+  total: number
+}
+
 export function useQuotes(params?: { limit?: number; offset?: number; status?: string; customer_id?: string }) {
-  return useQuery({
+  return useQuery<QuotesListResult, Error>({
     queryKey: ['quotes', params],
     queryFn: () =>
       container.quotes.list.execute({
@@ -14,7 +21,7 @@ export function useQuotes(params?: { limit?: number; offset?: number; status?: s
         status: params?.status,
         customer_id: params?.customer_id,
       }),
-  })
+  }) as UseQueryResult<QuotesListResult, Error>
 }
 
 export function useQuote(id: string) {

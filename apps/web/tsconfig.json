@@ -8,8 +8,6 @@
     "noEmit": true,
     "jsx": "preserve",
     "plugins": [{ "name": "next" }],
-    "declaration": true,
-    "declarationMap": true,
     "sourceMap": true,
     "strict": true,
     "noUnusedLocals": true,

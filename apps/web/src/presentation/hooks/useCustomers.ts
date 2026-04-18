@@ -1,11 +1,18 @@
 'use client'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { UseQueryResult } from '@tanstack/react-query'
+import type { Customer } from '@manager/domain'
 import { container } from '../../infrastructure/di/container'
 import type { CreateCustomerDto, UpdateCustomerDto } from '../../domain/repositories/customer.repository'
 
+type CustomersListResult = {
+  customers: Customer[]
+  total: number
+}
+
 export function useCustomers(params?: { limit?: number; offset?: number; search?: string }) {
-  return useQuery({
+  return useQuery<CustomersListResult, Error>({
     queryKey: ['customers', params],
     queryFn: () =>
       container.customers.list.execute({
@@ -13,9 +20,9 @@ export function useCustomers(params?: { limit?: number; offset?: number; search?
         offset: params?.offset ?? 0,
         search: params?.search,
       }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     staleTime: 10_000,
-  })
+  }) as UseQueryResult<CustomersListResult, Error>
 }
 
 export function useCustomer(id: string) {

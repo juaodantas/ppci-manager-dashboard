@@ -1,6 +1,8 @@
 'use client'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { UseQueryResult } from '@tanstack/react-query'
+import type { Project } from '@manager/domain'
 import { container } from '../../infrastructure/di/container'
 import type {
   CreateProjectDto,
@@ -11,6 +13,11 @@ import type {
   IssueProjectTaxDto,
 } from '../../domain/repositories/project.repository'
 
+type ProjectsListResult = {
+  projects: Project[]
+  total: number
+}
+
 export function useProjects(params?: {
   limit?: number
   offset?: number
@@ -18,7 +25,7 @@ export function useProjects(params?: {
   customer_id?: string
   search?: string
 }) {
-  return useQuery({
+  return useQuery<ProjectsListResult, Error>({
     queryKey: ['projects', params],
     queryFn: () =>
       container.projects.list.execute({
@@ -28,9 +35,9 @@ export function useProjects(params?: {
         customer_id: params?.customer_id,
         search: params?.search,
       }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     staleTime: 10_000,
-  })
+  }) as UseQueryResult<ProjectsListResult, Error>
 }
 
 export function useProject(id: string) {
