@@ -9,6 +9,7 @@ import {
   useProject,
   useUpdateProject,
   useAddProjectService,
+  useUpdateProjectService,
   useRemoveProjectService,
   useDeleteProject,
   useAddProjectTax,
@@ -60,6 +61,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const { data: customer } = useCustomer(project?.customer_id ?? '')
   const updateProject = useUpdateProject()
   const addService = useAddProjectService()
+  const updateService = useUpdateProjectService()
   const addTax = useAddProjectTax()
   const issueTax = useIssueProjectTax()
   const removeService = useRemoveProjectService()
@@ -72,6 +74,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [addTaxOpen, setAddTaxOpen] = useState(false)
   const [addPaymentOpen, setAddPaymentOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [editServiceOpen, setEditServiceOpen] = useState(false)
+  const [editTaxOpen, setEditTaxOpen] = useState(false)
   const [newStatus, setNewStatus] = useState('')
 
   // edit form
@@ -87,9 +91,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [svcPrice, setSvcPrice] = useState('')
   const [svcDesc, setSvcDesc] = useState('')
 
+  // edit service form
+  const [editServiceId, setEditServiceId] = useState('')
+  const [editServiceName, setEditServiceName] = useState('')
+  const [editSvcQty, setEditSvcQty] = useState('1')
+  const [editSvcPrice, setEditSvcPrice] = useState('')
+  const [editSvcDesc, setEditSvcDesc] = useState('')
+
   // tax form
   const [taxAmount, setTaxAmount] = useState('')
   const [taxDesc, setTaxDesc] = useState('')
+
+  // edit tax form
+  const [editTaxId, setEditTaxId] = useState('')
+  const [editTaxAmount, setEditTaxAmount] = useState('')
+  const [editTaxDesc, setEditTaxDesc] = useState('')
 
   // payment form
   const [pmtAmount, setPmtAmount] = useState('')
@@ -166,6 +182,34 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     setSvcServiceId(''); setSvcQty('1'); setSvcPrice(''); setSvcDesc('')
   }
 
+  const handleOpenEditService = (svc: ProjectService) => {
+    setEditServiceId(svc.id)
+    setEditServiceName(svc.service_name)
+    setEditSvcQty(String(svc.quantity))
+    setEditSvcPrice(String(svc.unit_price))
+    setEditSvcDesc(svc.description ?? '')
+    setEditServiceOpen(true)
+  }
+
+  const handleSaveEditService = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await updateService.mutateAsync({
+      id: editServiceId,
+      projectId: id,
+      dto: {
+        quantity: parseFloat(editSvcQty),
+        unit_price: parseFloat(editSvcPrice),
+        description: editSvcDesc || undefined,
+      },
+    })
+    setEditServiceOpen(false)
+    setEditServiceId('')
+    setEditServiceName('')
+    setEditSvcQty('1')
+    setEditSvcPrice('')
+    setEditSvcDesc('')
+  }
+
   const handleAddTax = async (e: React.FormEvent) => {
     e.preventDefault()
     await addTax.mutateAsync({
@@ -177,6 +221,29 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     })
     setAddTaxOpen(false)
     setTaxAmount(''); setTaxDesc('')
+  }
+
+  const handleOpenEditTax = (svc: ProjectService) => {
+    setEditTaxId(svc.id)
+    setEditTaxAmount(String(svc.unit_price))
+    setEditTaxDesc(svc.description ?? '')
+    setEditTaxOpen(true)
+  }
+
+  const handleSaveEditTax = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await updateService.mutateAsync({
+      id: editTaxId,
+      projectId: id,
+      dto: {
+        unit_price: parseFloat(editTaxAmount),
+        description: editTaxDesc || undefined,
+      },
+    })
+    setEditTaxOpen(false)
+    setEditTaxId('')
+    setEditTaxAmount('')
+    setEditTaxDesc('')
   }
 
   const handleAddPayment = async (e: React.FormEvent) => {
@@ -326,7 +393,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">{svc.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     {!isFinished && (
                       <td className="px-6 py-4 text-right">
-                        <Button size="sm" variant="danger" onClick={() => removeService.mutateAsync({ id: svc.id, projectId: id })}>Remover</Button>
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="secondary" onClick={() => handleOpenEditService(svc)}>Editar</Button>
+                          <Button size="sm" variant="danger" onClick={() => removeService.mutateAsync({ id: svc.id, projectId: id })}>Remover</Button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -368,7 +438,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       {!isFinished && (
                         <td className="px-6 py-4 text-right">
                           {!issued && (
-                            <Button size="sm" onClick={() => handleOpenIssueTax(svc.id)}>Emitir nota</Button>
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="secondary" onClick={() => handleOpenEditTax(svc)}>Editar</Button>
+                              <Button size="sm" variant="danger" onClick={() => removeService.mutateAsync({ id: svc.id, projectId: id })}>Remover</Button>
+                              <Button size="sm" onClick={() => handleOpenIssueTax(svc.id)}>Emitir nota</Button>
+                            </div>
                           )}
                         </td>
                       )}
@@ -470,6 +544,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </form>
       </Modal>
 
+      <Modal open={editServiceOpen} title="Editar Serviço" onClose={() => setEditServiceOpen(false)}>
+        <form onSubmit={handleSaveEditService} className="flex flex-col gap-4">
+          <Input label="Serviço" value={editServiceName} disabled />
+          <Input label="Quantidade *" type="number" min="0.01" step="0.01" value={editSvcQty} onChange={(e) => setEditSvcQty(e.target.value)} required />
+          <Input label="Preço unitário *" type="number" min="0" step="0.01" value={editSvcPrice} onChange={(e) => setEditSvcPrice(e.target.value)} required />
+          <Input label="Descrição" value={editSvcDesc} onChange={(e) => setEditSvcDesc(e.target.value)} />
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setEditServiceOpen(false)}>Cancelar</Button>
+            <Button type="submit" loading={updateService.isPending}>Salvar</Button>
+          </div>
+        </form>
+      </Modal>
+
       <Modal open={addTaxOpen} title="Adicionar Imposto" onClose={() => setAddTaxOpen(false)}>
         <form onSubmit={handleAddTax} className="flex flex-col gap-4">
           <Input label="Valor do imposto *" type="number" min="0.01" step="0.01" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} required />
@@ -477,6 +564,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => setAddTaxOpen(false)}>Cancelar</Button>
             <Button type="submit" loading={addTax.isPending}>Adicionar</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={editTaxOpen} title="Editar Imposto" onClose={() => setEditTaxOpen(false)}>
+        <form onSubmit={handleSaveEditTax} className="flex flex-col gap-4">
+          <Input label="Valor do imposto *" type="number" min="0.01" step="0.01" value={editTaxAmount} onChange={(e) => setEditTaxAmount(e.target.value)} required />
+          <Input label="Descrição" value={editTaxDesc} onChange={(e) => setEditTaxDesc(e.target.value)} />
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setEditTaxOpen(false)}>Cancelar</Button>
+            <Button type="submit" loading={updateService.isPending}>Salvar</Button>
           </div>
         </form>
       </Modal>
