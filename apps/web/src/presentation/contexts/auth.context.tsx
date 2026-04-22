@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isActive) {
           setIsAuthenticated(true)
         }
-      } catch (_error: unknown) {
+      } catch {
         container.tokenStorage.clear()
         if (isActive) {
           setIsAuthenticated(false)
