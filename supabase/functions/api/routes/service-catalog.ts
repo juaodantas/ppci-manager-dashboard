@@ -43,13 +43,13 @@ serviceCatalog.get('/:id', async (c) => {
 })
 
 serviceCatalog.post('/', async (c) => {
-  const body = await c.req.json()
-  const dto = validateBody(createServiceCatalogSchema, body)
-
   try {
+    const body = await c.req.json()
+    const dto = validateBody(createServiceCatalogSchema, body)
     const item = await createService(dto)
     return c.json(item, 201)
   } catch (err) {
+    if (err instanceof SyntaxError) return c.json({ error: 'Invalid JSON body' }, 400)
     if (err instanceof HttpError) return c.json({ error: err.message }, err.status)
     throw err
   }

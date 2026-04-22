@@ -20,10 +20,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = container.tokenStorage.getToken()
-    setIsAuthenticated(!!token)
-    setLoading(false)
-  }, [])
+    let isActive = true
+
+    const bootstrapAuth = async () => {
+      const refreshToken = container.tokenStorage.getRefreshToken()
+      const accessToken = container.tokenStorage.getToken()
+
+      if (!refreshToken) {
+        if (isActive) {
+          setIsAuthenticated(!!accessToken)
+          setLoading(false)
+        }
+        return
+      }
+
+      try {
+        await container.auth.refresh.execute()
+        if (isActive) {
+          setIsAuthenticated(true)
+        }
+      } catch (_error: unknown) {
+        container.tokenStorage.clear()
+        if (isActive) {
+          setIsAuthenticated(false)
+          router.replace('/login')
+        }
+      } finally {
+        if (isActive) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void bootstrapAuth()
+
+    return () => {
+      isActive = false
+    }
+  }, [router])
 
   const login = useCallback(async (email: string, password: string) => {
     await container.auth.login.execute(email, password)

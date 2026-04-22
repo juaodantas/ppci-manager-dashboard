@@ -62,7 +62,7 @@ _Nenhum no momento._
 
 - RBAC (roles e permissões granulares) — explicitamente fora de M7, pós-v1
 - packages/ui com Storybook — pós-v1
-- Refresh token rotation — migration `refresh_tokens` existe, `RefreshTokenUseCase` existe no frontend. Falta endpoint `/auth/refresh` no backend.
+- Refresh token rotation — migration `refresh_tokens` existe, `RefreshTokenUseCase` existe no frontend. Endpoint `/auth/refresh` já implementado. Frontend faz refresh automático no bootstrap e desloga se falhar.
 - Rate limiting com Hono middleware — pós-M7
 - Soft delete para projects e payments — M7 cobre customers; projects podem seguir depois
 - OpenTelemetry / observabilidade — pós-v1
