@@ -7,8 +7,8 @@ import type {
 
 export class GetFixedCostsUseCase {
   constructor(private readonly repo: IFixedCostRepository) {}
-  execute(includeInactive = false): Promise<FixedCost[]> {
-    return this.repo.findAll(includeInactive)
+  execute(params?: { includeInactive?: boolean; date_from?: string; date_to?: string }): Promise<FixedCost[]> {
+    return this.repo.findAll(params)
   }
 }
 

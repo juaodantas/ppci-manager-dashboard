@@ -149,18 +149,39 @@ export const payPaymentSchema = z.object({
 })
 
 // Fixed Cost
+const fixedCostDateSchema = z.string().date()
+
 export const createFixedCostSchema = z.object({
   name: z.string().min(1, 'name is required'),
   amount: z.number().positive(),
   due_day: z.number().int().min(1).max(31),
   category: z.string().optional(),
-})
+  start_date: fixedCostDateSchema.optional(),
+  end_date: fixedCostDateSchema.nullable().optional(),
+}).refine((data) => {
+  if (data.start_date && data.end_date) {
+    return data.end_date >= data.start_date
+  }
+  return true
+}, { message: 'end_date must be greater than or equal to start_date' })
 
 export const updateFixedCostSchema = z.object({
   name: z.string().min(1).optional(),
   amount: z.number().positive().optional(),
   due_day: z.number().int().min(1).max(31).optional(),
   category: z.string().optional(),
+  start_date: fixedCostDateSchema.optional(),
+  end_date: fixedCostDateSchema.nullable().optional(),
+}).refine((data) => {
+  if (data.start_date && data.end_date) {
+    return data.end_date >= data.start_date
+  }
+  return true
+}, { message: 'end_date must be greater than or equal to start_date' })
+
+export const fixedCostListQuerySchema = z.object({
+  date_from: fixedCostDateSchema.optional(),
+  date_to: fixedCostDateSchema.optional(),
 })
 
 // Variable Cost

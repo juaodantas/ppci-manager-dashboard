@@ -29,6 +29,10 @@ function currentMonthRange() {
   return { from, to }
 }
 
+function formatLocalDate(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
 function FixedCostForm({
   initial,
   onSubmit,
@@ -44,13 +48,50 @@ function FixedCostForm({
   const [amount, setAmount] = useState(String(initial?.amount ?? ''))
   const [dueDay, setDueDay] = useState(String(initial?.due_day ?? ''))
   const [category, setCategory] = useState(initial?.category ?? '')
+  const [startDate, setStartDate] = useState(
+    initial?.start_date ?? formatLocalDate(new Date()),
+  )
+  const [endDate, setEndDate] = useState(initial?.end_date ?? '')
+  const [isIndeterminate, setIsIndeterminate] = useState(initial?.end_date == null)
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ name, amount: parseFloat(amount), due_day: parseInt(dueDay), category: category || undefined }) }} className="flex flex-col gap-4">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        onSubmit({
+          name,
+          amount: parseFloat(amount),
+          due_day: parseInt(dueDay),
+          category: category || undefined,
+          start_date: startDate,
+          end_date: endDate === '' ? null : endDate,
+        })
+      }}
+      className="flex flex-col gap-4"
+    >
       <Input label="Nome *" value={name} onChange={(e) => setName(e.target.value)} required />
       <Input label="Valor *" type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
       <Input label="Dia de vencimento *" type="number" min="1" max="31" value={dueDay} onChange={(e) => setDueDay(e.target.value)} required />
       <Input label="Categoria" value={category} onChange={(e) => setCategory(e.target.value)} />
+      <Input label="Início da vigência *" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+      <div className="flex flex-col gap-2">
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          <input
+            type="checkbox"
+            checked={isIndeterminate}
+            onChange={(e) => setIsIndeterminate(e.target.checked)}
+            className="rounded"
+          />
+          Indeterminado
+        </label>
+        <Input
+          label="Fim da vigência"
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          disabled={isIndeterminate}
+        />
+      </div>
       <div className="flex justify-end gap-3">
         <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
         <Button type="submit" loading={loading}>Salvar</Button>
@@ -102,7 +143,7 @@ export default function FinancialPage() {
 
   const { data: report, isLoading: reportLoading } = useFinancialReport(dateFrom, dateTo)
   const { data: entries } = useFinancialEntries({ date_from: dateFrom, date_to: dateTo, limit: 50, offset: 0 })
-  const { data: fixedCosts } = useFixedCosts()
+  const { data: fixedCosts } = useFixedCosts({ date_from: dateFrom, date_to: dateTo })
   const { data: variableCosts } = useVariableCosts({ date_from: dateFrom, date_to: dateTo })
   const createFc = useCreateFixedCost()
   const updateFc = useUpdateFixedCost()

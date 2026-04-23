@@ -9,9 +9,17 @@ import type {
 export class FixedCostHttpRepository implements IFixedCostRepository {
   constructor(private readonly http: AxiosInstance) {}
 
-  async findAll(includeInactive = false): Promise<FixedCost[]> {
+  async findAll(params?: { includeInactive?: boolean; date_from?: string; date_to?: string }): Promise<FixedCost[]> {
+    const includeInactive = params?.includeInactive ?? false
+    const date_from = params?.date_from
+    const date_to = params?.date_to
+    const queryParams = {
+      ...(includeInactive ? { include_inactive: true } : {}),
+      ...(date_from ? { date_from } : {}),
+      ...(date_to ? { date_to } : {}),
+    }
     const { data } = await this.http.get<FixedCost[]>('/fixed-costs', {
-      params: includeInactive ? { include_inactive: true } : undefined,
+      params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
     })
     return data
   }

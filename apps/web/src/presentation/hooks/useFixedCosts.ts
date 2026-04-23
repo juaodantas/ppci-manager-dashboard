@@ -4,10 +4,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { container } from '../../infrastructure/di/container'
 import type { CreateFixedCostDto, UpdateFixedCostDto } from '../../domain/repositories/fixed-cost.repository'
 
-export function useFixedCosts(includeInactive = false) {
+export function useFixedCosts(params?: { includeInactive?: boolean; date_from?: string; date_to?: string }) {
+  const queryParams = {
+    includeInactive: params?.includeInactive ?? false,
+    date_from: params?.date_from,
+    date_to: params?.date_to,
+  }
   return useQuery({
-    queryKey: ['fixed-costs', { includeInactive }],
-    queryFn: () => container.fixedCosts.list.execute(includeInactive),
+    queryKey: ['fixed-costs', queryParams],
+    queryFn: () => container.fixedCosts.list.execute(queryParams),
   })
 }
 

@@ -6,14 +6,19 @@ import { updateFixedCost } from '../use-cases/fixed-cost/update-fixed-cost.ts'
 import { deleteFixedCost } from '../use-cases/fixed-cost/delete-fixed-cost.ts'
 import { HttpError } from '../errors.ts'
 import { validateBody } from '../validation/validate.ts'
-import { createFixedCostSchema, updateFixedCostSchema } from '../validation/schemas.ts'
+import { createFixedCostSchema, fixedCostListQuerySchema, updateFixedCostSchema } from '../validation/schemas.ts'
 
 const fixedCosts = new Hono()
 fixedCosts.use('*', authMiddleware)
 
 fixedCosts.get('/', async (c) => {
   const includeInactive = c.req.query('include_inactive') === 'true'
-  const result = await getAllFixedCosts(includeInactive)
+  const query = {
+    date_from: c.req.query('date_from') ?? undefined,
+    date_to: c.req.query('date_to') ?? undefined,
+  }
+  const { date_from, date_to } = validateBody(fixedCostListQuerySchema, query)
+  const result = await getAllFixedCosts({ includeInactive, date_from, date_to })
   return c.json(result)
 })
 

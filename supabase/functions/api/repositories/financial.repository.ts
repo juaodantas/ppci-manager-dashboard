@@ -52,12 +52,14 @@ export const FinancialRepository = {
               fc.name             AS description,
               fc.created_at
             FROM fixed_costs fc
-            CROSS JOIN generate_series(
-              date_trunc('month', ${date_from}::date),
-              date_trunc('month', ${date_to}::date),
+            CROSS JOIN LATERAL generate_series(
+              date_trunc('month', GREATEST(fc.start_date, ${date_from}::date)),
+              date_trunc('month', LEAST(COALESCE(fc.end_date, ${date_to}::date), ${date_to}::date)),
               '1 month'::interval
             ) AS gs
             WHERE fc.active = true
+              AND fc.start_date <= ${date_to}::date
+              AND COALESCE(fc.end_date, ${date_to}::date) >= ${date_from}::date
               AND (${type ?? null}::text IS NULL OR 'expense' = ${type ?? null}::text)
 
             UNION ALL
@@ -101,12 +103,14 @@ export const FinancialRepository = {
         UNION ALL
         SELECT 'expense' AS type, fc.amount
         FROM fixed_costs fc
-        CROSS JOIN generate_series(
-          date_trunc('month', ${date_from}::date),
-          date_trunc('month', ${date_to}::date),
+        CROSS JOIN LATERAL generate_series(
+          date_trunc('month', GREATEST(fc.start_date, ${date_from}::date)),
+          date_trunc('month', LEAST(COALESCE(fc.end_date, ${date_to}::date), ${date_to}::date)),
           '1 month'::interval
         ) AS gs
         WHERE fc.active = true
+          AND fc.start_date <= ${date_to}::date
+          AND COALESCE(fc.end_date, ${date_to}::date) >= ${date_from}::date
         UNION ALL
         SELECT 'expense' AS type, vc.amount
         FROM variable_costs vc
@@ -132,12 +136,14 @@ export const FinancialRepository = {
             (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
           ) AS date
         FROM fixed_costs fc
-        CROSS JOIN generate_series(
-          date_trunc('month', ${date_from}::date),
-          date_trunc('month', ${date_to}::date),
+        CROSS JOIN LATERAL generate_series(
+          date_trunc('month', GREATEST(fc.start_date, ${date_from}::date)),
+          date_trunc('month', LEAST(COALESCE(fc.end_date, ${date_to}::date), ${date_to}::date)),
           '1 month'::interval
         ) AS gs
         WHERE fc.active = true
+          AND fc.start_date <= ${date_to}::date
+          AND COALESCE(fc.end_date, ${date_to}::date) >= ${date_from}::date
         UNION ALL
         SELECT
           'expense' AS type,

@@ -1,26 +1,49 @@
 import sql from '../db.ts'
 import { FixedCost } from '../../_shared/domain/entities/fixed-cost.entity.ts'
 
-// deno-lint-ignore no-explicit-any
-function toFixedCost(row: Record<string, any>): FixedCost {
+type FixedCostRow = {
+  id: string
+  name: string
+  amount: number
+  due_day: number
+  category: string | null
+  active: boolean
+  start_date: string
+  end_date: string | null
+  created_at: string
+  updated_at: string
+}
+
+function toFixedCost(row: FixedCostRow): FixedCost {
   return {
-    id: row.id as string,
-    name: row.name as string,
-    amount: row.amount as number,
-    due_day: row.due_day as number,
-    category: row.category as string | null,
-    active: row.active as boolean,
-    created_at: row.created_at as string,
-    updated_at: row.updated_at as string,
+    id: row.id,
+    name: row.name,
+    amount: row.amount,
+    due_day: row.due_day,
+    category: row.category,
+    active: row.active,
+    start_date: row.start_date,
+    end_date: row.end_date,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
   }
 }
 
 export const FixedCostRepository = {
-  async findAll(includeInactive = false): Promise<FixedCost[]> {
+  async findAll(params: {
+    includeInactive: boolean
+    date_from?: string
+    date_to?: string
+  }): Promise<FixedCost[]> {
+    const { includeInactive, date_from, date_to } = params
     const rows = await sql`
       SELECT *
       FROM fixed_costs
       WHERE (${includeInactive} OR active = true)
+        AND (
+          (${date_from ?? null}::date IS NULL OR COALESCE(end_date, '9999-12-31'::date) >= ${date_from ?? null}::date)
+          AND (${date_to ?? null}::date IS NULL OR start_date <= ${date_to ?? null}::date)
+        )
       ORDER BY name ASC
     `
     return rows.map(toFixedCost)
@@ -36,14 +59,18 @@ export const FixedCostRepository = {
     amount: number
     due_day: number
     category?: string
+    start_date?: string
+    end_date?: string | null
   }): Promise<FixedCost> {
     const rows = await sql`
-      INSERT INTO fixed_costs (name, amount, due_day, category)
+      INSERT INTO fixed_costs (name, amount, due_day, category, start_date, end_date)
       VALUES (
         ${data.name},
         ${data.amount},
         ${data.due_day},
-        ${data.category ?? null}
+        ${data.category ?? null},
+        COALESCE(${data.start_date ?? null}::date, CURRENT_DATE),
+        ${data.end_date ?? null}::date
       )
       RETURNING *
     `
@@ -57,8 +84,11 @@ export const FixedCostRepository = {
       amount?: number
       due_day?: number
       category?: string
+      start_date?: string
+      end_date?: string | null
     },
   ): Promise<FixedCost | null> {
+    const shouldUpdateEndDate = data.end_date !== undefined
     const rows = await sql`
       UPDATE fixed_costs
       SET
@@ -66,6 +96,11 @@ export const FixedCostRepository = {
         amount     = COALESCE(${data.amount ?? null}::numeric, amount),
         due_day    = COALESCE(${data.due_day ?? null}::int, due_day),
         category   = COALESCE(${data.category ?? null}, category),
+        start_date = COALESCE(${data.start_date ?? null}::date, start_date),
+        end_date   = CASE
+          WHEN ${shouldUpdateEndDate} THEN ${data.end_date ?? null}::date
+          ELSE end_date
+        END,
         updated_at = now()
       WHERE id = ${id}
       RETURNING *

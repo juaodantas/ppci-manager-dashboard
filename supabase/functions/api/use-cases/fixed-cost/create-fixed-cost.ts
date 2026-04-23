@@ -8,5 +8,7 @@ export async function createFixedCost(dto: CreateFixedCostDto): Promise<FixedCos
     amount: dto.amount,
     due_day: dto.due_day,
     category: dto.category,
+    start_date: dto.start_date,
+    end_date: dto.end_date,
   })
 }
