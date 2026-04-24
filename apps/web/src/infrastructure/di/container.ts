@@ -3,6 +3,7 @@ import { createAxiosInstance } from '../http/axios-instance'
 import { AuthHttpRepository } from '../http/auth.http-repository'
 import { UserHttpRepository } from '../http/user.http-repository'
 import { CustomerHttpRepository } from '../http/customer.http-repository'
+import { CompanyHttpRepository } from '../http/company.http-repository'
 import { ServiceCatalogHttpRepository } from '../http/service-catalog.http-repository'
 import { QuoteHttpRepository } from '../http/quote.http-repository'
 import { ProjectHttpRepository } from '../http/project.http-repository'
@@ -25,6 +26,13 @@ import {
   UpdateCustomerUseCase,
   DeleteCustomerUseCase,
 } from '../../application/use-cases/customer/customer.use-cases'
+import {
+  GetCompaniesUseCase,
+  GetCompanyUseCase,
+  CreateCompanyUseCase,
+  UpdateCompanyUseCase,
+  DeleteCompanyUseCase,
+} from '../../application/use-cases/company/company.use-cases'
 import {
   GetServiceCatalogUseCase,
   CreateServiceCatalogUseCase,
@@ -87,6 +95,7 @@ authRepoRef.repo = new AuthHttpRepository(http)
 const authRepo = authRepoRef.repo
 const userRepo = new UserHttpRepository(http)
 const customerRepo = new CustomerHttpRepository(http)
+const companyRepo = new CompanyHttpRepository(http)
 const serviceCatalogRepo = new ServiceCatalogHttpRepository(http)
 const quoteRepo = new QuoteHttpRepository(http)
 const projectRepo = new ProjectHttpRepository(http)
@@ -116,6 +125,14 @@ export const container = {
     create: new CreateCustomerUseCase(customerRepo),
     update: new UpdateCustomerUseCase(customerRepo),
     delete: new DeleteCustomerUseCase(customerRepo),
+  },
+
+  companies: {
+    list: new GetCompaniesUseCase(companyRepo),
+    get: new GetCompanyUseCase(companyRepo),
+    create: new CreateCompanyUseCase(companyRepo),
+    update: new UpdateCompanyUseCase(companyRepo),
+    delete: new DeleteCompanyUseCase(companyRepo),
   },
 
   serviceCatalog: {

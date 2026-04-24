@@ -3,6 +3,7 @@ import { cors } from 'npm:hono/cors'
 import { authRoutes } from './routes/auth.ts'
 import { userRoutes } from './routes/users.ts'
 import { customerRoutes } from './routes/customers.ts'
+import { companyRoutes } from './routes/companies.ts'
 import { serviceCatalogRoutes } from './routes/service-catalog.ts'
 import { quoteRoutes } from './routes/quotes.ts'
 import { projectRoutes, projectServiceRoutes } from './routes/projects.ts'
@@ -28,6 +29,7 @@ app.get('/health', (c) => c.json({ status: 'ok' }))
 app.route('/auth', authRoutes)
 app.route('/users', userRoutes)
 app.route('/customers', customerRoutes)
+app.route('/companies', companyRoutes)
 app.route('/service-catalog', serviceCatalogRoutes)
 app.route('/quotes', quoteRoutes)
 app.route('/projects', projectRoutes)

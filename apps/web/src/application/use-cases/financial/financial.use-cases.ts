@@ -7,6 +7,7 @@ export class GetFinancialEntriesUseCase {
     type?: string
     date_from?: string
     date_to?: string
+    company_id?: string
     limit: number
     offset: number
   }): Promise<{ entries: FinancialEntry[]; total: number }> {
@@ -16,7 +17,7 @@ export class GetFinancialEntriesUseCase {
 
 export class GetFinancialReportUseCase {
   constructor(private readonly repo: IFinancialRepository) {}
-  execute(params: { date_from: string; date_to: string }): Promise<FinancialReport> {
+  execute(params: { date_from: string; date_to: string; company_id?: string }): Promise<FinancialReport> {
     return this.repo.getReport(params)
   }
 }

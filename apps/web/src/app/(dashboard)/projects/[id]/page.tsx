@@ -17,6 +17,7 @@ import {
 } from '../../../../presentation/hooks/useProjects'
 import { usePayments, useCreatePayment, usePayPayment } from '../../../../presentation/hooks/usePayments'
 import { useServiceCatalog } from '../../../../presentation/hooks/useServiceCatalog'
+import { useInternalCompanies } from '../../../../presentation/hooks/useCompanies'
 import { useCustomer } from '../../../../presentation/hooks/useCustomers'
 import { Button } from '../../../../presentation/components/ui/Button'
 import { Modal } from '../../../../presentation/components/ui/Modal'
@@ -58,6 +59,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const { data: project, isLoading } = useProject(id)
   const { data: paymentsData } = usePayments({ project_id: id, limit: 50, offset: 0 })
   const { data: catalog } = useServiceCatalog()
+  const { data: internalCompanies } = useInternalCompanies()
   const { data: customer } = useCustomer(project?.customer_id ?? '')
   const updateProject = useUpdateProject()
   const addService = useAddProjectService()
@@ -133,6 +135,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const payments = paymentsData?.payments ?? []
   const serviceOptions = (catalog ?? []).map((s) => ({ value: s.id, label: `${s.name} (${s.category.name})` }))
   const customerName = customer?.name ?? project.customer_id
+  const company = (internalCompanies?.companies ?? []).find((entry) => entry.id === project.company_id)
 
   const handleOpenEdit = () => {
     setEditName(project.name)
@@ -303,11 +306,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         {!isFinished && (
           <Button variant="secondary" size="sm" onClick={handleOpenEdit}>Editar</Button>
         )}
-        <ContractDownloadButton
-          project={project as typeof project & { services: ProjectService[] }}
-          customerName={customerName}
-          payments={payments}
-        />
+        {company ? (
+          <ContractDownloadButton
+            project={project as typeof project & { services: ProjectService[] }}
+            customerName={customerName}
+            payments={payments}
+            companyName={company.name}
+            companyCnpj={company.cnpj}
+          />
+        ) : (
+          <Button variant="secondary" size="sm" disabled>
+            Defina a empresa executora para gerar o documento
+          </Button>
+        )}
         <Button variant="danger" size="sm" loading={deleteProject.isPending} onClick={handleDeleteProject}>Excluir Projeto</Button>
       </div>
 

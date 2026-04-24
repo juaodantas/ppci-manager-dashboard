@@ -8,6 +8,7 @@ import { Button } from '../ui/Button'
 const navItems = [
   { href: '/', label: 'Dashboard' },
   { href: '/customers', label: 'Clientes' },
+  { href: '/companies', label: 'Empresas' },
   { href: '/quotes', label: 'Orçamentos' },
   { href: '/projects', label: 'Projetos' },
   { href: '/financial', label: 'Financeiro' },

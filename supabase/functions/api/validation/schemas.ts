@@ -28,6 +28,23 @@ export const refreshSchema = z.object({
   refresh_token: z.string().min(1, 'refresh_token is required'),
 })
 
+// Company
+export const companyTypeSchema = z.enum(['internal', 'supplier', 'outsourced'])
+
+export const createCompanySchema = z.object({
+  name: z.string().min(1, 'name is required'),
+  cnpj: z.string().regex(/^\d{2}\.\d{3}\.\d{3}\/\d{4}\-\d{2}$/, 'invalid CNPJ format'),
+  responsible: z.string().min(1, 'responsible is required'),
+  type: companyTypeSchema,
+})
+
+export const updateCompanySchema = z.object({
+  name: z.string().min(1).optional(),
+  cnpj: z.string().regex(/^\d{2}\.\d{3}\.\d{3}\/\d{4}\-\d{2}$/, 'invalid CNPJ format').optional(),
+  responsible: z.string().min(1).optional(),
+  type: companyTypeSchema.optional(),
+})
+
 // Customer
 export const createCustomerSchema = z.object({
   name: z.string().min(1, 'name is required'),
@@ -73,6 +90,7 @@ const quoteItemSchema = z.object({
 
 export const createQuoteSchema = z.object({
   customer_id: z.string().uuid(),
+  company_id: z.string().uuid(),
   valid_until: z.string().optional(),
   discount: z.number().min(0).optional(),
   notes: z.string().optional(),
@@ -84,6 +102,7 @@ export const updateQuoteSchema = z.object({
   discount: z.number().min(0).optional(),
   notes: z.string().optional(),
   status: z.enum(['draft', 'sent', 'rejected']).optional(),
+  company_id: z.string().uuid().optional(),
   items: z.array(quoteItemSchema).optional(),
 })
 
@@ -95,6 +114,7 @@ export const approveQuoteSchema = z.object({
 // Project
 export const createProjectSchema = z.object({
   customer_id: z.string().uuid(),
+  company_id: z.string().uuid(),
   quote_id: z.string().uuid().optional(),
   name: z.string().min(1),
   description: z.string().optional(),
@@ -107,6 +127,7 @@ export const updateProjectSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   status: z.enum(['planning', 'in_progress', 'finished', 'finished_pending_payment', 'canceled']).optional(),
+  company_id: z.string().uuid().optional(),
   start_date: z.string().optional(),
   end_date: z.string().optional(),
   total_value: z.number().min(0).optional(),
@@ -158,6 +179,7 @@ export const createFixedCostSchema = z.object({
   category: z.string().optional(),
   start_date: fixedCostDateSchema.optional(),
   end_date: fixedCostDateSchema.nullable().optional(),
+  company_id: z.string().uuid().optional(),
 }).refine((data) => {
   if (data.start_date && data.end_date) {
     return data.end_date >= data.start_date
@@ -172,6 +194,7 @@ export const updateFixedCostSchema = z.object({
   category: z.string().optional(),
   start_date: fixedCostDateSchema.optional(),
   end_date: fixedCostDateSchema.nullable().optional(),
+  company_id: z.string().uuid().optional().nullable(),
 }).refine((data) => {
   if (data.start_date && data.end_date) {
     return data.end_date >= data.start_date
@@ -191,6 +214,7 @@ export const createVariableCostSchema = z.object({
   date: z.string().date(),
   category: z.string().optional(),
   description: z.string().optional(),
+  company_id: z.string().uuid().optional(),
 })
 
 export const updateVariableCostSchema = z.object({
@@ -199,6 +223,7 @@ export const updateVariableCostSchema = z.object({
   date: z.string().date().optional(),
   category: z.string().optional(),
   description: z.string().optional(),
+  company_id: z.string().uuid().optional().nullable(),
 })
 
 // Types
@@ -227,3 +252,5 @@ export type CreateFixedCostDto = z.infer<typeof createFixedCostSchema>
 export type UpdateFixedCostDto = z.infer<typeof updateFixedCostSchema>
 export type CreateVariableCostDto = z.infer<typeof createVariableCostSchema>
 export type UpdateVariableCostDto = z.infer<typeof updateVariableCostSchema>
+export type CompanyCreateDto = z.infer<typeof createCompanySchema>
+export type CompanyUpdateDto = z.infer<typeof updateCompanySchema>

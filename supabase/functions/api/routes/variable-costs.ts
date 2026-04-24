@@ -14,7 +14,8 @@ variableCosts.use('*', authMiddleware)
 variableCosts.get('/', async (c) => {
   const date_from = c.req.query('date_from')
   const date_to = c.req.query('date_to')
-  const result = await getAllVariableCosts(date_from, date_to)
+  const company_id = c.req.query('company_id')
+  const result = await getAllVariableCosts({ date_from, date_to, company_id })
   return c.json(result)
 })
 

@@ -12,9 +12,10 @@ financial.get('/entries', async (c) => {
   const type = c.req.query('type')
   const date_from = c.req.query('date_from')
   const date_to = c.req.query('date_to')
+  const company_id = c.req.query('company_id')
 
   try {
-    const result = await FinancialRepository.findEntries({ type, date_from, date_to, limit, offset })
+    const result = await FinancialRepository.findEntries({ type, date_from, date_to, company_id, limit, offset })
     return c.json(result)
   } catch (err) {
     if (err instanceof HttpError) return c.json({ error: err.message }, err.status)
@@ -25,13 +26,14 @@ financial.get('/entries', async (c) => {
 financial.get('/report', async (c) => {
   const date_from = c.req.query('date_from')
   const date_to = c.req.query('date_to')
+  const company_id = c.req.query('company_id')
 
   if (!date_from || !date_to) {
     return c.json({ error: 'date_from and date_to are required' }, 400)
   }
 
   try {
-    const report = await FinancialRepository.getReport({ date_from, date_to })
+    const report = await FinancialRepository.getReport({ date_from, date_to, company_id })
     return c.json(report)
   } catch (err) {
     if (err instanceof HttpError) return c.json({ error: err.message }, err.status)

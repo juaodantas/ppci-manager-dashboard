@@ -10,6 +10,7 @@ export async function updateVariableCost(id: string, dto: UpdateVariableCostDto)
     date: dto.date,
     category: dto.category,
     description: dto.description,
+    company_id: dto.company_id,
   })
   if (!updated) throw notFound('VariableCost', id)
   return updated

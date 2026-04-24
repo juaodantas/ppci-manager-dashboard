@@ -1,6 +1,7 @@
 // Entities
 export { User, type UserProps } from './entities/user.entity.ts'
 export { type Customer, isDeleted as isCustomerDeleted } from './entities/customer.entity.ts'
+export { type CompanyType, type Company } from './entities/company.entity.ts'
 export {
   type ServiceCategory,
   type ServiceCatalogItem,

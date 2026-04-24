@@ -18,6 +18,7 @@ export async function updateFixedCost(id: string, dto: UpdateFixedCostDto): Prom
     amount: dto.amount,
     due_day: dto.due_day,
     category: dto.category,
+    company_id: dto.company_id,
     start_date: dto.start_date,
     end_date: dto.end_date,
   })

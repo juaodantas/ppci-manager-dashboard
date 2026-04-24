@@ -9,6 +9,7 @@ export interface QuoteItemDto {
 
 export interface CreateQuoteDto {
   customer_id: string
+  company_id: string
   valid_until?: string
   discount?: number
   notes?: string
@@ -20,6 +21,7 @@ export interface UpdateQuoteDto {
   discount?: number
   notes?: string
   status?: 'draft' | 'sent' | 'rejected'
+  company_id?: string
   items?: QuoteItemDto[]
 }
 

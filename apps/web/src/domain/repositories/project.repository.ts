@@ -2,6 +2,7 @@ import type { Project, ProjectService } from '@manager/domain'
 
 export interface CreateProjectDto {
   customer_id: string
+  company_id: string
   quote_id?: string
   name: string
   description?: string
@@ -14,6 +15,7 @@ export interface UpdateProjectDto {
   name?: string
   description?: string
   status?: 'planning' | 'in_progress' | 'finished' | 'finished_pending_payment' | 'canceled'
+  company_id?: string
   start_date?: string
   end_date?: string
   total_value?: number
@@ -49,9 +51,10 @@ export interface IProjectRepository {
   findAll(params: {
     limit: number
     offset: number
-    status?: string
-    customer_id?: string
-    search?: string
+  status?: string
+  customer_id?: string
+  company_id?: string
+  search?: string
   }): Promise<{ projects: Project[]; total: number }>
   findById(id: string): Promise<Project>
   create(data: CreateProjectDto): Promise<Project>

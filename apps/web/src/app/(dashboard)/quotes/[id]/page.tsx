@@ -6,10 +6,13 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useQuote, useApproveQuote } from '../../../../presentation/hooks/useQuotes'
 import { useCustomer } from '../../../../presentation/hooks/useCustomers'
+import { useServiceCatalog } from '../../../../presentation/hooks/useServiceCatalog'
+import { useInternalCompanies } from '../../../../presentation/hooks/useCompanies'
 import { Button } from '../../../../presentation/components/ui/Button'
 import { Modal } from '../../../../presentation/components/ui/Modal'
 import { Input } from '../../../../presentation/components/ui/Input'
 import type { QuoteItem } from '@manager/domain'
+import { getQuoteItemLabel, type ServiceNameById } from '../../../../presentation/utils/service-label'
 
 const QuoteDownloadButton = dynamic(
   () => import('../../../../presentation/components/pdf/QuoteDownloadButton').then((m) => m.QuoteDownloadButton),
@@ -29,6 +32,8 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
   const router = useRouter()
   const { data: quote, isLoading } = useQuote(id)
   const { data: customer } = useCustomer(quote?.customer_id ?? '')
+  const { data: catalog } = useServiceCatalog()
+  const { data: internalCompanies } = useInternalCompanies()
   const approve = useApproveQuote()
   const [approveOpen, setApproveOpen] = useState(false)
   const [projectName, setProjectName] = useState('')
@@ -39,6 +44,11 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
 
   const customerName = customer?.name ?? quote.customer_id
   const hasItems = (quote.items ?? []).length > 0
+  const company = (internalCompanies?.companies ?? []).find((entry) => entry.id === quote.company_id)
+  const serviceNameById = (catalog ?? []).reduce<ServiceNameById>((acc, service) => {
+    acc[service.id] = service.name
+    return acc
+  }, {})
 
   const handleApprove = async () => {
     const result = await approve.mutateAsync({ id, dto: { name: projectName, start_date: startDate || undefined } })
@@ -59,10 +69,19 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
           <Button onClick={() => { setProjectName(''); setApproveOpen(true) }}>Aprovar → Projeto</Button>
         )}
         {hasItems && (
-          <QuoteDownloadButton
-            quote={quote as typeof quote & { items: QuoteItem[] }}
-            customerName={customerName}
-          />
+          company ? (
+            <QuoteDownloadButton
+              quote={quote as typeof quote & { items: QuoteItem[] }}
+              customerName={customerName}
+              companyName={company.name}
+              companyCnpj={company.cnpj}
+              serviceNameById={serviceNameById}
+            />
+          ) : (
+            <Button variant="secondary" size="sm" disabled>
+              Defina a empresa executora para gerar o documento
+            </Button>
+          )
         )}
       </div>
 
@@ -101,9 +120,9 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {(quote.items ?? []).map((item) => (
+            {(quote.items ?? []).map((item, index) => (
               <tr key={item.id}>
-                <td className="px-6 py-4 text-sm text-gray-900">{item.description ?? item.service_id}</td>
+                <td className="px-6 py-4 text-sm text-gray-900">{getQuoteItemLabel(item, index, serviceNameById)}</td>
                 <td className="px-6 py-4 text-right text-sm text-gray-700">{item.quantity}</td>
                 <td className="px-6 py-4 text-right text-sm text-gray-700">{item.unit_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                 <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">{item.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>

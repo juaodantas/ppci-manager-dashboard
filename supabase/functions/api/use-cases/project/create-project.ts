@@ -6,6 +6,7 @@ export async function createProject(dto: CreateProjectDto): Promise<Project> {
   return ProjectRepository.save({
     customer_id: dto.customer_id,
     quote_id: dto.quote_id,
+    company_id: dto.company_id,
     name: dto.name,
     description: dto.description,
     start_date: dto.start_date,

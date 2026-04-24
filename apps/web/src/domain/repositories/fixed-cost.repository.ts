@@ -7,6 +7,7 @@ export interface CreateFixedCostDto {
   category?: string
   start_date?: string
   end_date?: string | null
+  company_id?: string
 }
 
 export interface UpdateFixedCostDto {
@@ -16,10 +17,11 @@ export interface UpdateFixedCostDto {
   category?: string
   start_date?: string
   end_date?: string | null
+  company_id?: string | null
 }
 
 export interface IFixedCostRepository {
-  findAll(params?: { includeInactive?: boolean; date_from?: string; date_to?: string }): Promise<FixedCost[]>
+  findAll(params?: { includeInactive?: boolean; date_from?: string; date_to?: string; company_id?: string }): Promise<FixedCost[]>
   create(data: CreateFixedCostDto): Promise<FixedCost>
   update(id: string, data: UpdateFixedCostDto): Promise<FixedCost>
   delete(id: string): Promise<void>

@@ -3,19 +3,30 @@
 import { PDFDownloadLink } from '@react-pdf/renderer'
 import { QuotePDF } from './quote-pdf'
 import type { Quote, QuoteItem } from '@manager/domain'
+import type { ServiceNameById } from '../../utils/service-label'
 
 interface Props {
   quote: Quote & { items: QuoteItem[] }
   customerName: string
   companyName?: string
+  companyCnpj?: string
+  serviceNameById?: ServiceNameById
 }
 
-export function QuoteDownloadButton({ quote, customerName, companyName }: Props) {
+export function QuoteDownloadButton({ quote, customerName, companyName, companyCnpj, serviceNameById }: Props) {
   const filename = `orcamento-${quote.id.slice(0, 8)}.pdf`
 
   return (
     <PDFDownloadLink
-      document={<QuotePDF quote={quote} customerName={customerName} companyName={companyName} />}
+      document={(
+        <QuotePDF
+          quote={quote}
+          customerName={customerName}
+          companyName={companyName}
+          companyCnpj={companyCnpj}
+          serviceNameById={serviceNameById}
+        />
+      )}
       fileName={filename}
     >
       {({ loading }) => (

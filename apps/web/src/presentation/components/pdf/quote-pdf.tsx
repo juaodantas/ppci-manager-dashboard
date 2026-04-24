@@ -8,6 +8,7 @@ import {
   Image,
 } from '@react-pdf/renderer'
 import type { Quote, QuoteItem } from '@manager/domain'
+import { getQuoteItemLabel, type ServiceNameById } from '../../utils/service-label'
 
 Font.register({
   family: 'Helvetica',
@@ -215,9 +216,17 @@ interface QuotePDFProps {
   quote: Quote & { items: QuoteItem[] }
   customerName: string
   companyName?: string
+  companyCnpj?: string
+  serviceNameById?: ServiceNameById
 }
 
-export function QuotePDF({ quote, customerName, companyName = 'Empresa WS' }: QuotePDFProps) {
+export function QuotePDF({
+  quote,
+  customerName,
+  companyName = 'Empresa WS',
+  companyCnpj,
+  serviceNameById = {},
+}: QuotePDFProps) {
   const subtotal = (quote.items ?? []).reduce((s, i) => s + i.total_price, 0)
   const total = subtotal - (quote.discount ?? 0)
 
@@ -230,10 +239,13 @@ export function QuotePDF({ quote, customerName, companyName = 'Empresa WS' }: Qu
             {/* eslint-disable-next-line jsx-a11y/alt-text */}
             <Image style={styles.logo} src="/logo.png" />
             <Text style={styles.companyName}>{companyName}</Text>
-            <Text style={styles.companySubtitle}>Proteção e Prevenção Contra Incêndio</Text>
-          </View>
-          <View>
-            <Text style={styles.docTitle}>ORÇAMENTO</Text>
+          <Text style={styles.companySubtitle}>Proteção e Prevenção Contra Incêndio</Text>
+          {companyCnpj && (
+            <Text style={styles.companySubtitle}>CNPJ: {companyCnpj}</Text>
+          )}
+        </View>
+        <View>
+          <Text style={styles.docTitle}>ORÇAMENTO</Text>
             <Text style={styles.docMeta}>Data: {fmtDate(quote.created_at)}</Text>
             <Text style={styles.docMeta}>Status: {STATUS_LABELS[quote.status] ?? quote.status}</Text>
             {quote.valid_until && (
@@ -267,7 +279,7 @@ export function QuotePDF({ quote, customerName, companyName = 'Empresa WS' }: Qu
                 style={[styles.tableRow, i % 2 !== 0 ? styles.tableRowEven : {}]}
               >
                 <Text style={[styles.tdText, styles.colService]}>
-                  {item.description ?? `Serviço ${i + 1}`}
+                  {getQuoteItemLabel(item, i, serviceNameById)}
                 </Text>
                 <Text style={[styles.tdText, styles.colQty]}>{item.quantity}</Text>
                 <Text style={[styles.tdText, styles.colUnit]}>{fmt(item.unit_price)}</Text>

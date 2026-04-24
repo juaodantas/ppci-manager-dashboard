@@ -8,6 +8,7 @@ type FixedCostRow = {
   due_day: number
   category: string | null
   active: boolean
+  company_id: string | null
   start_date: string
   end_date: string | null
   created_at: string
@@ -24,6 +25,7 @@ function toFixedCost(row: FixedCostRow): FixedCost {
     active: row.active,
     start_date: row.start_date,
     end_date: row.end_date,
+    company_id: row.company_id,
     created_at: row.created_at,
     updated_at: row.updated_at,
   }
@@ -34,16 +36,18 @@ export const FixedCostRepository = {
     includeInactive: boolean
     date_from?: string
     date_to?: string
+    company_id?: string
   }): Promise<FixedCost[]> {
-    const { includeInactive, date_from, date_to } = params
+    const { includeInactive, date_from, date_to, company_id } = params
     const rows = await sql`
       SELECT *
       FROM fixed_costs
       WHERE (${includeInactive} OR active = true)
-        AND (
-          (${date_from ?? null}::date IS NULL OR COALESCE(end_date, '9999-12-31'::date) >= ${date_from ?? null}::date)
-          AND (${date_to ?? null}::date IS NULL OR start_date <= ${date_to ?? null}::date)
-        )
+      AND (${company_id ?? null}::uuid IS NULL OR company_id = ${company_id ?? null}::uuid)
+      AND (
+        (${date_from ?? null}::date IS NULL OR COALESCE(end_date, '9999-12-31'::date) >= ${date_from ?? null}::date)
+        AND (${date_to ?? null}::date IS NULL OR start_date <= ${date_to ?? null}::date)
+      )
       ORDER BY name ASC
     `
     return rows.map(toFixedCost)
@@ -59,16 +63,18 @@ export const FixedCostRepository = {
     amount: number
     due_day: number
     category?: string
+    company_id?: string | null
     start_date?: string
     end_date?: string | null
   }): Promise<FixedCost> {
     const rows = await sql`
-      INSERT INTO fixed_costs (name, amount, due_day, category, start_date, end_date)
+      INSERT INTO fixed_costs (name, amount, due_day, category, company_id, start_date, end_date)
       VALUES (
         ${data.name},
         ${data.amount},
         ${data.due_day},
         ${data.category ?? null},
+        ${data.company_id ?? null},
         COALESCE(${data.start_date ?? null}::date, CURRENT_DATE),
         ${data.end_date ?? null}::date
       )
@@ -84,6 +90,7 @@ export const FixedCostRepository = {
       amount?: number
       due_day?: number
       category?: string
+      company_id?: string | null
       start_date?: string
       end_date?: string | null
     },
@@ -95,8 +102,9 @@ export const FixedCostRepository = {
         name       = COALESCE(${data.name ?? null}, name),
         amount     = COALESCE(${data.amount ?? null}::numeric, amount),
         due_day    = COALESCE(${data.due_day ?? null}::int, due_day),
-        category   = COALESCE(${data.category ?? null}, category),
-        start_date = COALESCE(${data.start_date ?? null}::date, start_date),
+      category = COALESCE(${data.category ?? null}, category),
+      company_id = COALESCE(${data.company_id ?? null}::uuid, company_id),
+      start_date = COALESCE(${data.start_date ?? null}::date, start_date),
         end_date   = CASE
           WHEN ${shouldUpdateEndDate} THEN ${data.end_date ?? null}::date
           ELSE end_date

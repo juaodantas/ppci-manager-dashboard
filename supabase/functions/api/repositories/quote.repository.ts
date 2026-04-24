@@ -19,6 +19,7 @@ function toQuote(row: Record<string, any>, items?: QuoteItem[]): Quote {
   return {
     id: row.id as string,
     customer_id: row.customer_id as string,
+    company_id: row.company_id ?? null,
     status: row.status as Quote['status'],
     total_amount: Number(row.total_amount),
     discount: Number(row.discount),
@@ -65,17 +66,19 @@ export const QuoteRepository = {
 
   async save(data: {
     customer_id: string
+    company_id?: string
     valid_until?: string
     discount?: number
     notes?: string
     items: { service_id: string; quantity: number; unit_price: number; description?: string }[]
   }): Promise<Quote> {
-    const { customer_id, valid_until, discount, notes, items } = data
+    const { customer_id, company_id, valid_until, discount, notes, items } = data
 
     const quoteRows = await sql`
-      INSERT INTO quotes (customer_id, valid_until, discount, notes)
+      INSERT INTO quotes (customer_id, company_id, valid_until, discount, notes)
       VALUES (
         ${customer_id},
+        ${company_id ?? null},
         ${valid_until ?? null},
         ${discount ?? 0},
         ${notes ?? null}
@@ -107,6 +110,7 @@ export const QuoteRepository = {
       discount?: number
       notes?: string | null
       status?: Quote['status']
+      company_id?: string
       items?: { service_id: string; quantity: number; unit_price: number; description?: string }[]
     },
   ): Promise<Quote | null> {
@@ -117,10 +121,11 @@ export const QuoteRepository = {
       UPDATE quotes
       SET
         valid_until = COALESCE(${data.valid_until ?? null}, valid_until),
-        discount    = COALESCE(${data.discount ?? null}, discount),
-        notes       = COALESCE(${data.notes ?? null}, notes),
-        status      = COALESCE(${data.status ?? null}::quote_status_enum, status),
-        updated_at  = now()
+        discount = COALESCE(${data.discount ?? null}, discount),
+        notes = COALESCE(${data.notes ?? null}, notes),
+        status = COALESCE(${data.status ?? null}::quote_status_enum, status),
+        company_id = COALESCE(${data.company_id ?? null}::uuid, company_id),
+        updated_at = now()
       WHERE id = ${id}
     `
 
@@ -163,13 +168,14 @@ export const QuoteRepository = {
     const totalValue = quote.total_amount - quote.discount
 
     const projectRows = await sql`
-      INSERT INTO projects (customer_id, quote_id, name, start_date, total_value)
+      INSERT INTO projects (customer_id, quote_id, name, start_date, total_value, company_id)
       VALUES (
         ${quote.customer_id},
         ${quote.id},
         ${projectData.name},
         ${projectData.start_date ?? null},
-        ${totalValue}
+        ${totalValue},
+        ${quote.company_id ?? null}
       )
       RETURNING id
     `

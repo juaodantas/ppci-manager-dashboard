@@ -13,6 +13,7 @@ export interface QuoteItem {
 export interface Quote {
   id: string
   customer_id: string
+  company_id?: string | null
   status: QuoteStatus
   total_amount: number
   discount: number

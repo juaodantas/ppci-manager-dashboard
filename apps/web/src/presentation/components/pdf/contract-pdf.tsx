@@ -206,6 +206,7 @@ interface ContractPDFProps {
   customerName: string
   payments: Payment[]
   companyName?: string
+  companyCnpj?: string
 }
 
 export function ContractPDF({
@@ -213,6 +214,7 @@ export function ContractPDF({
   customerName,
   payments,
   companyName = 'Empresa WS',
+  companyCnpj,
 }: ContractPDFProps) {
   const services = (project.services ?? []).filter((svc) => svc.service_type !== 'tax_deduction')
   const totalServices = services.reduce((s, i) => s + i.total_price, 0)
@@ -226,10 +228,13 @@ export function ContractPDF({
             {/* eslint-disable-next-line jsx-a11y/alt-text */}
             <Image style={styles.logo} src="/logo.png" />
             <Text style={styles.companyName}>{companyName}</Text>
-            <Text style={styles.companySubtitle}>Proteção e Prevenção Contra Incêndio</Text>
-          </View>
-          <View>
-            <Text style={styles.docTitle}>CONTRATO DE SERVIÇOS</Text>
+          <Text style={styles.companySubtitle}>Proteção e Prevenção Contra Incêndio</Text>
+          {companyCnpj && (
+            <Text style={styles.companySubtitle}>CNPJ: {companyCnpj}</Text>
+          )}
+        </View>
+        <View>
+          <Text style={styles.docTitle}>CONTRATO DE SERVIÇOS</Text>
             <Text style={styles.docMeta}>Data: {fmtDate(new Date().toISOString())}</Text>
             <Text style={styles.docMeta}>Status: {STATUS_LABELS[project.status] ?? project.status}</Text>
           </View>

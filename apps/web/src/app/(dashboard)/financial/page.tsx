@@ -5,6 +5,7 @@ import type { FixedCost, VariableCost } from '@manager/domain'
 import { Button } from '../../../presentation/components/ui/Button'
 import { Input } from '../../../presentation/components/ui/Input'
 import { Modal } from '../../../presentation/components/ui/Modal'
+import { Select } from '../../../presentation/components/ui/Select'
 import { useFinancialReport, useFinancialEntries } from '../../../presentation/hooks/useFinancial'
 import {
   useFixedCosts,
@@ -18,6 +19,7 @@ import {
   useUpdateVariableCost,
   useDeleteVariableCost,
 } from '../../../presentation/hooks/useVariableCosts'
+import { useCompanies } from '../../../presentation/hooks/useCompanies'
 import type { CreateFixedCostDto, UpdateFixedCostDto } from '../../../domain/repositories/fixed-cost.repository'
 import type { CreateVariableCostDto, UpdateVariableCostDto } from '../../../domain/repositories/variable-cost.repository'
 
@@ -38,16 +40,19 @@ function FixedCostForm({
   onSubmit,
   onCancel,
   loading,
+  companyOptions,
 }: {
   initial?: FixedCost
   onSubmit: (dto: CreateFixedCostDto) => void
   onCancel: () => void
   loading: boolean
+  companyOptions: { value: string; label: string }[]
 }) {
   const [name, setName] = useState(initial?.name ?? '')
   const [amount, setAmount] = useState(String(initial?.amount ?? ''))
   const [dueDay, setDueDay] = useState(String(initial?.due_day ?? ''))
   const [category, setCategory] = useState(initial?.category ?? '')
+  const [companyId, setCompanyId] = useState(initial?.company_id ?? '')
   const [startDate, setStartDate] = useState(
     initial?.start_date ?? formatLocalDate(new Date()),
   )
@@ -65,6 +70,7 @@ function FixedCostForm({
           category: category || undefined,
           start_date: startDate,
           end_date: endDate === '' ? null : endDate,
+          company_id: companyId || undefined,
         })
       }}
       className="flex flex-col gap-4"
@@ -73,6 +79,7 @@ function FixedCostForm({
       <Input label="Valor *" type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
       <Input label="Dia de vencimento *" type="number" min="1" max="31" value={dueDay} onChange={(e) => setDueDay(e.target.value)} required />
       <Input label="Categoria" value={category} onChange={(e) => setCategory(e.target.value)} />
+      <Select label="Empresa" options={companyOptions} value={companyId} onChange={(e) => setCompanyId(e.target.value)} />
       <Input label="Início da vigência *" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
       <div className="flex flex-col gap-2">
         <label className="flex items-center gap-2 text-sm text-gray-600">
@@ -105,25 +112,29 @@ function VariableCostForm({
   onSubmit,
   onCancel,
   loading,
+  companyOptions,
 }: {
   initial?: VariableCost
   onSubmit: (dto: CreateVariableCostDto) => void
   onCancel: () => void
   loading: boolean
+  companyOptions: { value: string; label: string }[]
 }) {
   const [name, setName] = useState(initial?.name ?? '')
   const [amount, setAmount] = useState(String(initial?.amount ?? ''))
   const [date, setDate] = useState(initial?.date ?? '')
   const [category, setCategory] = useState(initial?.category ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
+  const [companyId, setCompanyId] = useState(initial?.company_id ?? '')
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ name, amount: parseFloat(amount), date, category: category || undefined, description: description || undefined }) }} className="flex flex-col gap-4">
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ name, amount: parseFloat(amount), date, category: category || undefined, description: description || undefined, company_id: companyId || undefined }) }} className="flex flex-col gap-4">
       <Input label="Nome *" value={name} onChange={(e) => setName(e.target.value)} required />
       <Input label="Valor *" type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
       <Input label="Data *" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
       <Input label="Categoria" value={category} onChange={(e) => setCategory(e.target.value)} />
       <Input label="Descrição" value={description} onChange={(e) => setDescription(e.target.value)} />
+      <Select label="Empresa" options={companyOptions} value={companyId} onChange={(e) => setCompanyId(e.target.value)} />
       <div className="flex justify-end gap-3">
         <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
         <Button type="submit" loading={loading}>Salvar</Button>
@@ -136,21 +147,33 @@ export default function FinancialPage() {
   const { from, to } = currentMonthRange()
   const [dateFrom, setDateFrom] = useState(from)
   const [dateTo, setDateTo] = useState(to)
+  const [companyId, setCompanyId] = useState('')
   const [fcModalOpen, setFcModalOpen] = useState(false)
   const [editingFc, setEditingFc] = useState<FixedCost | undefined>()
   const [vcModalOpen, setVcModalOpen] = useState(false)
   const [editingVc, setEditingVc] = useState<VariableCost | undefined>()
 
-  const { data: report, isLoading: reportLoading } = useFinancialReport(dateFrom, dateTo)
-  const { data: entries } = useFinancialEntries({ date_from: dateFrom, date_to: dateTo, limit: 50, offset: 0 })
+  const { data: report, isLoading: reportLoading } = useFinancialReport({ date_from: dateFrom, date_to: dateTo, company_id: companyId || undefined })
+  const { data: entries } = useFinancialEntries({ date_from: dateFrom, date_to: dateTo, company_id: companyId || undefined, limit: 50, offset: 0 })
   const { data: fixedCosts } = useFixedCosts({ date_from: dateFrom, date_to: dateTo })
   const { data: variableCosts } = useVariableCosts({ date_from: dateFrom, date_to: dateTo })
   const createFc = useCreateFixedCost()
   const updateFc = useUpdateFixedCost()
   const deleteFc = useDeleteFixedCost()
+  const { data: companiesData } = useCompanies({ limit: 200 })
   const createVc = useCreateVariableCost()
   const updateVc = useUpdateVariableCost()
   const deleteVc = useDeleteVariableCost()
+
+  const allCompanyOptions = [
+    { value: '', label: 'Nenhum (custo geral)' },
+    ...(companiesData?.companies ?? []).map((c) => ({ value: c.id, label: `${c.name} (${c.type})` })),
+  ]
+
+  const companyFilterOptions = [
+    { value: '', label: 'Todas as empresas' },
+    ...(companiesData?.companies ?? []).map((c) => ({ value: c.id, label: `${c.name} (${c.type})` })),
+  ]
 
   const handleFcSubmit = async (dto: CreateFixedCostDto | UpdateFixedCostDto) => {
     if (editingFc) {
@@ -178,6 +201,7 @@ export default function FinancialPage() {
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
           <span className="text-gray-400">até</span>
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          <Select options={companyFilterOptions} value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="w-64" />
         </div>
       </div>
 
@@ -348,6 +372,7 @@ export default function FinancialPage() {
           onSubmit={handleFcSubmit}
           onCancel={() => { setFcModalOpen(false); setEditingFc(undefined) }}
           loading={createFc.isPending || updateFc.isPending}
+          companyOptions={allCompanyOptions}
         />
       </Modal>
 
@@ -361,6 +386,7 @@ export default function FinancialPage() {
           onSubmit={handleVcSubmit}
           onCancel={() => { setVcModalOpen(false); setEditingVc(undefined) }}
           loading={createVc.isPending || updateVc.isPending}
+          companyOptions={allCompanyOptions}
         />
       </Modal>
     </div>

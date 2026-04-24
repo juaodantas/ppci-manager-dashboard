@@ -6,6 +6,7 @@ export interface CreateVariableCostDto {
   date: string
   category?: string
   description?: string
+  company_id?: string
 }
 
 export interface UpdateVariableCostDto {
@@ -14,10 +15,11 @@ export interface UpdateVariableCostDto {
   date?: string
   category?: string
   description?: string
+  company_id?: string | null
 }
 
 export interface IVariableCostRepository {
-  findAll(params?: { date_from?: string; date_to?: string }): Promise<VariableCost[]>
+  findAll(params?: { date_from?: string; date_to?: string; company_id?: string }): Promise<VariableCost[]>
   create(data: CreateVariableCostDto): Promise<VariableCost>
   update(id: string, data: UpdateVariableCostDto): Promise<VariableCost>
   delete(id: string): Promise<void>

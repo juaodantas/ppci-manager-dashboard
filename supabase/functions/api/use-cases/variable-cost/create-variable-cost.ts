@@ -9,5 +9,6 @@ export async function createVariableCost(dto: CreateVariableCostDto): Promise<Va
     date: dto.date,
     category: dto.category,
     description: dto.description,
+    company_id: dto.company_id,
   })
 }

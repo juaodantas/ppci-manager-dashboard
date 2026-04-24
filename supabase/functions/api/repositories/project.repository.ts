@@ -25,6 +25,7 @@ function toProject(row: Record<string, any>, services?: ProjectService[]): Proje
     id: row.id as string,
     customer_id: row.customer_id as string,
     quote_id: row.quote_id ?? null,
+    company_id: row.company_id ?? null,
     name: row.name as string,
     description: row.description ?? null,
     status: row.status as Project['status'],
@@ -43,9 +44,10 @@ export const ProjectRepository = {
     offset: number
     status?: string
     customer_id?: string
+    company_id?: string
     search?: string
   }): Promise<{ projects: Project[]; total: number }> {
-    const { limit, offset, status, customer_id, search } = params
+    const { limit, offset, status, customer_id, company_id, search } = params
     const query = search?.trim()
 
     const rows = await sql`
@@ -53,8 +55,9 @@ export const ProjectRepository = {
       FROM projects
       WHERE
         (${status ?? null}::text IS NULL OR status = ${status ?? null}::project_status_enum)
-        AND (${customer_id ?? null}::uuid IS NULL OR customer_id = ${customer_id ?? null}::uuid)
-        AND (${query ?? null}::text IS NULL OR name ILIKE ${`%${query ?? ''}%`})
+      AND (${customer_id ?? null}::uuid IS NULL OR customer_id = ${customer_id ?? null}::uuid)
+      AND (${company_id ?? null}::uuid IS NULL OR company_id = ${company_id ?? null}::uuid)
+      AND (${query ?? null}::text IS NULL OR name ILIKE ${`%${query ?? ''}%`})
       ORDER BY created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     `
@@ -102,6 +105,7 @@ export const ProjectRepository = {
   async save(data: {
     customer_id: string
     quote_id?: string
+    company_id?: string
     name: string
     description?: string
     start_date?: string
@@ -109,10 +113,11 @@ export const ProjectRepository = {
     total_value?: number
   }): Promise<Project> {
     const rows = await sql`
-      INSERT INTO projects (customer_id, quote_id, name, description, start_date, end_date, total_value)
+      INSERT INTO projects (customer_id, quote_id, company_id, name, description, start_date, end_date, total_value)
       VALUES (
         ${data.customer_id},
         ${data.quote_id ?? null},
+        ${data.company_id ?? null},
         ${data.name},
         ${data.description ?? null},
         ${data.start_date ?? null},
@@ -133,18 +138,20 @@ export const ProjectRepository = {
       start_date?: string
       end_date?: string
       total_value?: number
+      company_id?: string
     },
   ): Promise<Project | null> {
     const rows = await sql`
       UPDATE projects
       SET
-        name        = COALESCE(${data.name ?? null}, name),
+        name = COALESCE(${data.name ?? null}, name),
         description = COALESCE(${data.description ?? null}, description),
-        status      = COALESCE(${data.status ?? null}::project_status_enum, status),
-        start_date  = COALESCE(${data.start_date ?? null}::date, start_date),
-        end_date    = COALESCE(${data.end_date ?? null}::date, end_date),
+        status = COALESCE(${data.status ?? null}::project_status_enum, status),
+        start_date = COALESCE(${data.start_date ?? null}::date, start_date),
+        end_date = COALESCE(${data.end_date ?? null}::date, end_date),
         total_value = COALESCE(${data.total_value ?? null}::numeric, total_value),
-        updated_at  = now()
+        company_id = COALESCE(${data.company_id ?? null}::uuid, company_id),
+        updated_at = now()
       WHERE id = ${id}
       RETURNING *
     `

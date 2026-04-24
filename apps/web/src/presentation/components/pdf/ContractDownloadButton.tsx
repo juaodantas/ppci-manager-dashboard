@@ -9,9 +9,10 @@ interface Props {
   customerName: string
   payments: Payment[]
   companyName?: string
+  companyCnpj?: string
 }
 
-export function ContractDownloadButton({ project, customerName, payments, companyName }: Props) {
+export function ContractDownloadButton({ project, customerName, payments, companyName, companyCnpj }: Props) {
   const filename = `contrato-${project.name.toLowerCase().replace(/\s+/g, '-').slice(0, 30)}.pdf`
 
   return (
@@ -22,6 +23,7 @@ export function ContractDownloadButton({ project, customerName, payments, compan
           customerName={customerName}
           payments={payments}
           companyName={companyName}
+          companyCnpj={companyCnpj}
         />
       }
       fileName={filename}

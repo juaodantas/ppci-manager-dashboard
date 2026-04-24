@@ -22,6 +22,7 @@ export interface Project {
   id: string
   customer_id: string
   quote_id?: string | null
+  company_id?: string | null
   name: string
   description?: string | null
   status: ProjectStatus

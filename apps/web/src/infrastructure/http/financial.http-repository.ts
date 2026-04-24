@@ -9,6 +9,7 @@ export class FinancialHttpRepository implements IFinancialRepository {
     type?: string
     date_from?: string
     date_to?: string
+    company_id?: string
     limit: number
     offset: number
   }): Promise<{ entries: FinancialEntry[]; total: number }> {
@@ -19,7 +20,7 @@ export class FinancialHttpRepository implements IFinancialRepository {
     return data
   }
 
-  async getReport(params: { date_from: string; date_to: string }): Promise<FinancialReport> {
+  async getReport(params: { date_from: string; date_to: string; company_id?: string }): Promise<FinancialReport> {
     const { data } = await this.http.get<FinancialReport>('/financial/report', { params })
     return data
   }

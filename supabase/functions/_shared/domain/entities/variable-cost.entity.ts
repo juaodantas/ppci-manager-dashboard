@@ -5,6 +5,7 @@ export interface VariableCost {
   date: string
   category?: string | null
   description?: string | null
+  company_id?: string | null
   created_at: string
   updated_at: string
 }

@@ -7,6 +7,7 @@ export interface FixedCost {
   active: boolean
   start_date: string
   end_date: string | null
+  company_id?: string | null
   created_at: string
   updated_at: string
 }

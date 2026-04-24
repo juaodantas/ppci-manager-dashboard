@@ -7,6 +7,7 @@ export function useFinancialEntries(params?: {
   type?: string
   date_from?: string
   date_to?: string
+  company_id?: string
   limit?: number
   offset?: number
 }) {
@@ -17,16 +18,17 @@ export function useFinancialEntries(params?: {
         type: params?.type,
         date_from: params?.date_from,
         date_to: params?.date_to,
+        company_id: params?.company_id,
         limit: params?.limit ?? 50,
         offset: params?.offset ?? 0,
       }),
   })
 }
 
-export function useFinancialReport(date_from: string, date_to: string) {
+export function useFinancialReport(params: { date_from: string; date_to: string; company_id?: string }) {
   return useQuery({
-    queryKey: ['financial', 'report', date_from, date_to],
-    queryFn: () => container.financial.report.execute({ date_from, date_to }),
-    enabled: !!date_from && !!date_to,
+    queryKey: ['financial', 'report', params],
+    queryFn: () => container.financial.report.execute({ date_from: params.date_from, date_to: params.date_to, company_id: params.company_id }),
+    enabled: !!params.date_from && !!params.date_to,
   })
 }
