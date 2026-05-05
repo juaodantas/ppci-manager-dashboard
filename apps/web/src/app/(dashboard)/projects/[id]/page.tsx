@@ -135,6 +135,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const payments = paymentsData?.payments ?? []
   const serviceOptions = (catalog ?? []).map((s) => ({ value: s.id, label: `${s.name} (${s.category.name})` }))
   const customerName = customer?.name ?? project.customer_id
+  const customerDocument = customer?.document
   const company = (internalCompanies?.companies ?? []).find((entry) => entry.id === project.company_id)
 
   const handleOpenEdit = () => {
@@ -310,6 +311,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <ContractDownloadButton
             project={project as typeof project & { services: ProjectService[] }}
             customerName={customerName}
+            customerDocument={customerDocument}
             payments={payments}
             companyName={company.name}
             companyCnpj={company.cnpj}

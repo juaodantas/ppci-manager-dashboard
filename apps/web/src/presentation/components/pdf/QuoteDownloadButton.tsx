@@ -8,12 +8,13 @@ import type { ServiceNameById } from '../../utils/service-label'
 interface Props {
   quote: Quote & { items: QuoteItem[] }
   customerName: string
+  customerDocument?: string
   companyName?: string
   companyCnpj?: string
   serviceNameById?: ServiceNameById
 }
 
-export function QuoteDownloadButton({ quote, customerName, companyName, companyCnpj, serviceNameById }: Props) {
+export function QuoteDownloadButton({ quote, customerName, customerDocument, companyName, companyCnpj, serviceNameById }: Props) {
   const filename = `orcamento-${quote.id.slice(0, 8)}.pdf`
 
   return (
@@ -22,6 +23,7 @@ export function QuoteDownloadButton({ quote, customerName, companyName, companyC
         <QuotePDF
           quote={quote}
           customerName={customerName}
+          customerDocument={customerDocument}
           companyName={companyName}
           companyCnpj={companyCnpj}
           serviceNameById={serviceNameById}

@@ -15,6 +15,8 @@ Font.register({
   fonts: [],
 })
 
+Font.registerHyphenationCallback((word) => [word])
+
 const styles = StyleSheet.create({
   page: {
     fontFamily: 'Helvetica',
@@ -32,16 +34,32 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: '#562923',
   },
+  headerLeft: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: '60%',
+  },
+  headerRight: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: '40%',
+    alignItems: 'flex-end',
+    textAlign: 'right',
+  },
   logo: {
     width: 80,
     height: 40,
     objectFit: 'contain',
     marginBottom: 4,
   },
+  companyBlock: {
+    maxWidth: 280,
+  },
   companyName: {
     fontSize: 20,
     fontFamily: 'Helvetica-Bold',
     color: '#562923',
+    lineHeight: 1.1,
   },
   companySubtitle: {
     fontSize: 9,
@@ -49,10 +67,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   docTitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontFamily: 'Helvetica-Bold',
     color: '#111827',
     textAlign: 'right',
+    lineHeight: 1.15,
   },
   docMeta: {
     fontSize: 9,
@@ -205,6 +224,14 @@ function fmtDate(dateStr?: string | null) {
   return new Date(dateStr).toLocaleDateString('pt-BR')
 }
 
+function getCompanyNameStyle(companyName: string) {
+  const length = companyName.trim().length
+  if (length >= 60) return { fontSize: 10 }
+  if (length >= 45) return { fontSize: 12 }
+  if (length >= 32) return { fontSize: 14 }
+  return { fontSize: 20 }
+}
+
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Rascunho',
   sent: 'Enviado',
@@ -215,6 +242,7 @@ const STATUS_LABELS: Record<string, string> = {
 interface QuotePDFProps {
   quote: Quote & { items: QuoteItem[] }
   customerName: string
+  customerDocument?: string
   companyName?: string
   companyCnpj?: string
   serviceNameById?: ServiceNameById
@@ -223,10 +251,13 @@ interface QuotePDFProps {
 export function QuotePDF({
   quote,
   customerName,
+  customerDocument,
   companyName = 'Empresa WS',
   companyCnpj,
   serviceNameById = {},
 }: QuotePDFProps) {
+  const resolvedCustomerName = customerName.trim() || quote.customer_id || '—'
+  const resolvedCustomerDocument = customerDocument?.trim()
   const subtotal = (quote.items ?? []).reduce((s, i) => s + i.total_price, 0)
   const total = subtotal - (quote.discount ?? 0)
 
@@ -235,17 +266,21 @@ export function QuotePDF({
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={[styles.companyBlock, styles.headerLeft]}>
             {/* eslint-disable-next-line jsx-a11y/alt-text */}
             <Image style={styles.logo} src="/logo.png" />
-            <Text style={styles.companyName}>{companyName}</Text>
-          <Text style={styles.companySubtitle}>Proteção e Prevenção Contra Incêndio</Text>
-          {companyCnpj && (
-            <Text style={styles.companySubtitle}>CNPJ: {companyCnpj}</Text>
-          )}
-        </View>
-        <View>
-          <Text style={styles.docTitle}>ORÇAMENTO</Text>
+            <Text
+              style={[styles.companyName, getCompanyNameStyle(companyName)]}
+            >
+              {companyName}
+            </Text>
+            <Text style={styles.companySubtitle}>Proteção e Prevenção Contra Incêndio</Text>
+            {companyCnpj && (
+              <Text style={styles.companySubtitle}>CNPJ: {companyCnpj}</Text>
+            )}
+          </View>
+          <View style={styles.headerRight}>
+            <Text style={styles.docTitle}>ORÇAMENTO</Text>
             <Text style={styles.docMeta}>Data: {fmtDate(quote.created_at)}</Text>
             <Text style={styles.docMeta}>Status: {STATUS_LABELS[quote.status] ?? quote.status}</Text>
             {quote.valid_until && (
@@ -259,8 +294,14 @@ export function QuotePDF({
           <Text style={styles.sectionTitle}>Cliente</Text>
           <View style={styles.infoBlock}>
             <Text style={styles.infoLabel}>Nome</Text>
-            <Text style={styles.infoValue}>{customerName}</Text>
+            <Text style={styles.infoValue}>{resolvedCustomerName}</Text>
           </View>
+          {resolvedCustomerDocument && (
+            <View style={[styles.infoBlock, { marginTop: 8 }]}>
+              <Text style={styles.infoLabel}>CPF/CNPJ</Text>
+              <Text style={styles.infoValue}>{resolvedCustomerDocument}</Text>
+            </View>
+          )}
         </View>
 
         {/* Items table */}

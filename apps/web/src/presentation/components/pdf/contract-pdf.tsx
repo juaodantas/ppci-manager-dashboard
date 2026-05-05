@@ -5,6 +5,7 @@ import {
   View,
   StyleSheet,
   Image,
+  Font,
 } from '@react-pdf/renderer'
 import type { Project, ProjectService, Payment } from '@manager/domain'
 
@@ -24,16 +25,32 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: '#562923',
   },
+  headerLeft: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: '60%',
+  },
+  headerRight: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: '40%',
+    alignItems: 'flex-end',
+    textAlign: 'right',
+  },
   logo: {
     width: 80,
     height: 40,
     objectFit: 'contain',
     marginBottom: 4,
   },
+  companyBlock: {
+    maxWidth: 280,
+  },
   companyName: {
     fontSize: 20,
     fontFamily: 'Helvetica-Bold',
     color: '#562923',
+    lineHeight: 1.1,
   },
   companySubtitle: {
     fontSize: 9,
@@ -41,10 +58,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   docTitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontFamily: 'Helvetica-Bold',
     color: '#111827',
     textAlign: 'right',
+    lineHeight: 1.15,
   },
   docMeta: {
     fontSize: 9,
@@ -184,6 +202,13 @@ const styles = StyleSheet.create({
   },
 })
 
+Font.register({
+  family: 'Helvetica',
+  fonts: [],
+})
+
+Font.registerHyphenationCallback((word) => [word])
+
 function fmt(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
@@ -191,6 +216,24 @@ function fmt(value: number) {
 function fmtDate(dateStr?: string | null) {
   if (!dateStr) return '—'
   return new Date(dateStr).toLocaleDateString('pt-BR')
+}
+
+function getDaysUntil(dateStr?: string | null) {
+  if (!dateStr) return null
+  const target = new Date(dateStr).getTime()
+  if (Number.isNaN(target)) return null
+  const now = new Date().getTime()
+  const diff = target - now
+  const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+  return Math.max(0, days)
+}
+
+function getCompanyNameStyle(companyName: string) {
+  const length = companyName.trim().length
+  if (length >= 60) return { fontSize: 10 }
+  if (length >= 45) return { fontSize: 12 }
+  if (length >= 32) return { fontSize: 14 }
+  return { fontSize: 20 }
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -205,6 +248,7 @@ interface ContractPDFProps {
   project: Project & { services: ProjectService[] }
   customerName: string
   payments: Payment[]
+  customerDocument?: string
   companyName?: string
   companyCnpj?: string
 }
@@ -213,28 +257,36 @@ export function ContractPDF({
   project,
   customerName,
   payments,
+  customerDocument,
   companyName = 'Empresa WS',
   companyCnpj,
 }: ContractPDFProps) {
   const services = (project.services ?? []).filter((svc) => svc.service_type !== 'tax_deduction')
   const totalServices = services.reduce((s, i) => s + i.total_price, 0)
+  const daysUntilEnd = getDaysUntil(project.end_date)
+  const rescisaoPrazoText = daysUntilEnd === null ? 'prazo a definir' : `${daysUntilEnd} dias`
+  const resolvedCustomerDocument = customerDocument?.trim()
 
   return (
     <Document title={`Contrato — ${project.name}`} author={companyName}>
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={[styles.companyBlock, styles.headerLeft]}>
             {/* eslint-disable-next-line jsx-a11y/alt-text */}
             <Image style={styles.logo} src="/logo.png" />
-            <Text style={styles.companyName}>{companyName}</Text>
-          <Text style={styles.companySubtitle}>Proteção e Prevenção Contra Incêndio</Text>
-          {companyCnpj && (
-            <Text style={styles.companySubtitle}>CNPJ: {companyCnpj}</Text>
-          )}
-        </View>
-        <View>
-          <Text style={styles.docTitle}>CONTRATO DE SERVIÇOS</Text>
+            <Text
+              style={[styles.companyName, getCompanyNameStyle(companyName)]}
+            >
+              {companyName}
+            </Text>
+            <Text style={styles.companySubtitle}>Proteção e Prevenção Contra Incêndio</Text>
+            {companyCnpj && (
+              <Text style={styles.companySubtitle}>CNPJ: {companyCnpj}</Text>
+            )}
+          </View>
+          <View style={styles.headerRight}>
+            <Text style={styles.docTitle}>CONTRATO DE SERVIÇOS</Text>
             <Text style={styles.docMeta}>Data: {fmtDate(new Date().toISOString())}</Text>
             <Text style={styles.docMeta}>Status: {STATUS_LABELS[project.status] ?? project.status}</Text>
           </View>
@@ -252,6 +304,12 @@ export function ContractPDF({
               <Text style={styles.infoLabel}>Cliente</Text>
               <Text style={styles.infoValue}>{customerName}</Text>
             </View>
+            {resolvedCustomerDocument && (
+              <View style={styles.infoBlock}>
+                <Text style={styles.infoLabel}>CPF/CNPJ</Text>
+                <Text style={styles.infoValue}>{resolvedCustomerDocument}</Text>
+              </View>
+            )}
             <View style={styles.infoBlock}>
               <Text style={styles.infoLabel}>Início previsto</Text>
               <Text style={styles.infoValue}>{fmtDate(project.start_date)}</Text>
@@ -292,7 +350,7 @@ export function ContractPDF({
           ))}
           <View style={styles.totalBox}>
             <Text style={styles.totalLabel}>Valor total do contrato:</Text>
-            <Text style={styles.totalValue}>{fmt(project.total_value || totalServices)}</Text>
+            <Text style={styles.totalValue}>{fmt(totalServices)}</Text>
           </View>
         </View>
 
@@ -323,19 +381,115 @@ export function ContractPDF({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Cláusulas Gerais</Text>
           <Text style={styles.clauseText}>
-            1. O presente contrato tem por objeto a prestação dos serviços de proteção e prevenção contra incêndio descritos no escopo acima, conforme normas técnicas vigentes.
+            1. CLÁUSULA – DO OBJETO
           </Text>
           <Text style={styles.clauseText}>
-            2. Os serviços serão executados de acordo com as normas da ABNT e exigências do Corpo de Bombeiros Militar, dentro do prazo acordado entre as partes.
+            O presente contrato tem por objeto a prestação de serviços de consultoria, assessoria técnica e/ou execução de serviços especializados na área de proteção e prevenção contra incêndio, conforme escopo descrito neste instrumento, proposta comercial, ordem de serviço ou documento equivalente aprovado pelas partes.
           </Text>
           <Text style={styles.clauseText}>
-            3. O pagamento deverá ser realizado conforme o cronograma financeiro estabelecido. O atraso no pagamento implicará multa de 2% e juros de mora de 1% ao mês.
+            Parágrafo único. A CONTRATADA limitar-se-á à execução dos serviços expressamente previstos no escopo contratado. Qualquer serviço adicional deverá ser previamente ajustado entre as partes, por escrito, podendo gerar alteração de prazo e valor.
           </Text>
           <Text style={styles.clauseText}>
-            4. Qualquer alteração no escopo dos serviços deverá ser formalmente acordada entre as partes mediante aditivo contratual.
+            2. CLÁUSULA – DO PRAZO DE EXECUÇÃO
           </Text>
           <Text style={styles.clauseText}>
-            5. O presente instrumento é firmado em caráter irrevogável e irretratável, obrigando as partes e seus sucessores.
+            Os serviços serão executados no prazo acordado entre as partes, contado a partir da assinatura deste contrato, do pagamento inicial, quando houver, e/ou da entrega dos documentos e informações necessários ao início dos trabalhos.
+          </Text>
+          <Text style={styles.clauseText}>
+            Parágrafo primeiro. O cumprimento dos prazos dependerá da colaboração do CONTRATANTE, especialmente quanto ao envio de documentos, informações, plantas, autorizações, acessos ao local e demais elementos necessários à execução dos serviços.
+          </Text>
+          <Text style={styles.clauseText}>
+            Parágrafo segundo. Eventuais atrasos decorrentes da falta de documentos, informações, aprovações, acesso ao local, pagamento ou providências de responsabilidade do CONTRATANTE não serão considerados atraso da CONTRATADA.
+          </Text>
+          <Text style={styles.clauseText}>
+            3. CLÁUSULA – DO VALOR E DA FORMA DE PAGAMENTO
+          </Text>
+          <Text style={styles.clauseText}>
+            Pela prestação dos serviços contratados, o CONTRATANTE pagará à CONTRATADA o valor total de {fmt(totalServices)}, conforme condições e cronograma financeiro estabelecidos entre as partes.
+          </Text>
+          <Text style={styles.clauseText}>
+            Parágrafo primeiro. O pagamento deverá ser realizado por meio de PIX, transferência bancária, boleto ou outro meio, conforme dados informados pela CONTRATADA.
+          </Text>
+          <Text style={styles.clauseText}>
+            Parágrafo segundo. O atraso no pagamento implicará multa de 2% sobre o valor em atraso, acrescida de juros de mora de 1% ao mês, calculados proporcionalmente ao período de atraso.
+          </Text>
+          <Text style={styles.clauseText}>
+            Parágrafo terceiro. A ausência de pagamento nas condições acordadas poderá acarretar a suspensão dos serviços até a regularização dos valores pendentes, sem que isso configure descumprimento contratual por parte da CONTRATADA.
+          </Text>
+          <Text style={styles.clauseText}>
+            4. CLÁUSULA – DAS DESPESAS NÃO INCLUÍDAS
+          </Text>
+          <Text style={styles.clauseText}>
+            Não estão incluídas no valor contratado eventuais taxas, emolumentos, despesas com órgãos públicos, emissão de ART/RRT, plotagem de plantas, materiais, equipamentos, adequações físicas, deslocamentos extraordinários, hospedagens, serviços de terceiros ou quaisquer outros custos não previstos expressamente no escopo contratado.
+          </Text>
+          <Text style={styles.clauseText}>
+            Parágrafo único. As despesas adicionais necessárias à execução dos serviços deverão ser previamente informadas ao CONTRATANTE e somente serão realizadas mediante aprovação das partes.
+          </Text>
+          <Text style={styles.clauseText}>
+            5. CLÁUSULA – DAS OBRIGAÇÕES DO CONTRATANTE
+          </Text>
+          <Text style={styles.clauseText}>
+            São obrigações do CONTRATANTE: a) fornecer à CONTRATADA todos os documentos, informações, plantas, autorizações, acessos e demais elementos necessários à execução dos serviços; b) efetuar os pagamentos nas datas e condições acordadas; c) prestar informações verdadeiras, completas e atualizadas; d) aprovar previamente eventuais despesas adicionais necessárias à execução dos serviços; e) providenciar adequações, correções, obras, materiais, equipamentos ou serviços de terceiros que não estejam incluídos no escopo contratado; f) permitir o acesso da CONTRATADA ao local de execução dos serviços, quando necessário; g) acompanhar e validar as informações necessárias ao adequado andamento dos trabalhos.
+          </Text>
+          <Text style={styles.clauseText}>
+            6. CLÁUSULA – DAS OBRIGAÇÕES DA CONTRATADA
+          </Text>
+          <Text style={styles.clauseText}>
+            São obrigações da CONTRATADA: a) executar os serviços contratados com zelo, técnica e responsabilidade; b) utilizar mão de obra especializada e capacitada, quando aplicável; c) observar as normas técnicas vigentes e exigências dos órgãos competentes, dentro do escopo contratado; d) prestar esclarecimentos ao CONTRATANTE sobre o andamento dos serviços; e) executar os serviços conforme as condições previstas neste contrato e no escopo aprovado pelas partes; f) responder por eventuais falhas técnicas diretamente decorrentes de sua atuação.
+          </Text>
+          <Text style={styles.clauseText}>
+            7. CLÁUSULA – DA ALTERAÇÃO DE ESCOPO
+          </Text>
+          <Text style={styles.clauseText}>
+            Qualquer alteração, ampliação, redução ou modificação dos serviços contratados deverá ser previamente acordada entre as partes, por escrito, mediante aditivo contratual, nova proposta comercial, ordem de serviço ou outro documento equivalente.
+          </Text>
+          <Text style={styles.clauseText}>
+            Parágrafo único. Alterações de escopo poderão implicar revisão de valores, prazos e condições de execução.
+          </Text>
+          <Text style={styles.clauseText}>
+            8. CLÁUSULA – DA CONFIDENCIALIDADE
+          </Text>
+          <Text style={styles.clauseText}>
+            As partes comprometem-se a manter sigilo sobre documentos, dados técnicos, informações comerciais, projetos, laudos, relatórios e quaisquer outras informações a que tiverem acesso em razão deste contrato.
+          </Text>
+          <Text style={styles.clauseText}>
+            Parágrafo único. As informações obtidas deverão ser utilizadas exclusivamente para a execução dos serviços contratados, não podendo ser divulgadas a terceiros sem autorização prévia da parte interessada, salvo por exigência legal ou solicitação de órgão competente.
+          </Text>
+          <Text style={styles.clauseText}>
+            9. CLÁUSULA – DA AUSÊNCIA DE VÍNCULO
+          </Text>
+          <Text style={styles.clauseText}>
+            O presente contrato não gera vínculo empregatício, societário, associativo, de representação comercial, mandato ou subordinação entre as partes, tratando-se de prestação de serviços autônoma e independente.
+          </Text>
+          <Text style={styles.clauseText}>
+            10. CLÁUSULA – DA RESCISÃO
+          </Text>
+          <Text style={styles.clauseText}>
+            O presente contrato poderá ser rescindido por acordo entre as partes ou em caso de descumprimento de qualquer obrigação contratual.
+          </Text>
+          <Text style={styles.clauseText}>
+            Parágrafo primeiro. Em caso de rescisão imotivada pelo CONTRATANTE após o início dos serviços, serão devidos à CONTRATADA os valores correspondentes aos serviços já executados, bem como eventuais despesas já assumidas, aprovadas ou necessárias até a data da rescisão.
+          </Text>
+          <Text style={styles.clauseText}>
+            Parágrafo segundo. Em caso de descumprimento contratual, a parte prejudicada poderá notificar a outra para regularização no prazo de {rescisaoPrazoText}, sob pena de rescisão do contrato.
+          </Text>
+          <Text style={styles.clauseText}>
+            11. CLÁUSULA – DAS DISPOSIÇÕES GERAIS
+          </Text>
+          <Text style={styles.clauseText}>
+            A eventual tolerância de uma das partes quanto ao descumprimento de qualquer obrigação contratual não constituirá novação, renúncia ou alteração das condições pactuadas.
+          </Text>
+          <Text style={styles.clauseText}>
+            Parágrafo primeiro. Este contrato obriga as partes e seus sucessores, a qualquer título.
+          </Text>
+          <Text style={styles.clauseText}>
+            Parágrafo segundo. O presente instrumento somente poderá ser alterado mediante acordo por escrito entre as partes.
+          </Text>
+          <Text style={styles.clauseText}>
+            12. CLÁUSULA – DO FORO
+          </Text>
+          <Text style={styles.clauseText}>
+            Fica eleito o foro da Comarca de Cuiabá-MT para dirimir quaisquer dúvidas ou controvérsias decorrentes deste contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja.
           </Text>
         </View>
 

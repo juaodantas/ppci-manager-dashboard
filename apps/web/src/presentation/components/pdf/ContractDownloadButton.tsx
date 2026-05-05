@@ -8,11 +8,12 @@ interface Props {
   project: Project & { services: ProjectService[] }
   customerName: string
   payments: Payment[]
+  customerDocument?: string
   companyName?: string
   companyCnpj?: string
 }
 
-export function ContractDownloadButton({ project, customerName, payments, companyName, companyCnpj }: Props) {
+export function ContractDownloadButton({ project, customerName, customerDocument, payments, companyName, companyCnpj }: Props) {
   const filename = `contrato-${project.name.toLowerCase().replace(/\s+/g, '-').slice(0, 30)}.pdf`
 
   return (
@@ -21,6 +22,7 @@ export function ContractDownloadButton({ project, customerName, payments, compan
         <ContractPDF
           project={project}
           customerName={customerName}
+          customerDocument={customerDocument}
           payments={payments}
           companyName={companyName}
           companyCnpj={companyCnpj}

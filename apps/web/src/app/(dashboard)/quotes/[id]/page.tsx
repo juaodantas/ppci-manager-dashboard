@@ -43,6 +43,7 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
   if (!quote) return <div className="py-12 text-center text-gray-500">Orçamento não encontrado</div>
 
   const customerName = customer?.name ?? quote.customer_id
+  const customerDocument = customer?.document
   const hasItems = (quote.items ?? []).length > 0
   const company = (internalCompanies?.companies ?? []).find((entry) => entry.id === quote.company_id)
   const serviceNameById = (catalog ?? []).reduce<ServiceNameById>((acc, service) => {
@@ -73,6 +74,7 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
             <QuoteDownloadButton
               quote={quote as typeof quote & { items: QuoteItem[] }}
               customerName={customerName}
+              customerDocument={customerDocument}
               companyName={company.name}
               companyCnpj={company.cnpj}
               serviceNameById={serviceNameById}
