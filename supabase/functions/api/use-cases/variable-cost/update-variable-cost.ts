@@ -7,6 +7,7 @@ export async function updateVariableCost(id: string, dto: UpdateVariableCostDto)
   const updated = await VariableCostRepository.update(id, {
     name: dto.name,
     amount: dto.amount,
+    interest_amount: dto.interest_amount,
     date: dto.date,
     category: dto.category,
     description: dto.description,

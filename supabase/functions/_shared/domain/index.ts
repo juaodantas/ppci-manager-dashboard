@@ -17,7 +17,7 @@ export {
   type Project,
 } from './entities/project.entity.ts'
 export { type PaymentStatus, type Payment } from './entities/payment.entity.ts'
-export { type FixedCost } from './entities/fixed-cost.entity.ts'
+export { type FixedCost, type FixedCostInterest } from './entities/fixed-cost.entity.ts'
 export { type VariableCost } from './entities/variable-cost.entity.ts'
 export {
   type EntryType,

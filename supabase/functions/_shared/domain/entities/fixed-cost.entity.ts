@@ -11,3 +11,13 @@ export interface FixedCost {
   created_at: string
   updated_at: string
 }
+
+export interface FixedCostInterest {
+  id: string
+  fixed_cost_id: string
+  reference_year: number
+  reference_month: number
+  interest_amount: number
+  created_at: string
+  updated_at: string
+}

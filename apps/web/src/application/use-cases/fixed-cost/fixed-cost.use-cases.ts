@@ -1,6 +1,9 @@
 import type { FixedCost } from '@manager/domain'
 import type {
   IFixedCostRepository,
+  FixedCostInterest,
+  CreateFixedCostInterestDto,
+  UpdateFixedCostInterestDto,
   CreateFixedCostDto,
   UpdateFixedCostDto,
 } from '../../../domain/repositories/fixed-cost.repository'
@@ -30,5 +33,33 @@ export class DeleteFixedCostUseCase {
   constructor(private readonly repo: IFixedCostRepository) {}
   execute(id: string): Promise<void> {
     return this.repo.delete(id)
+  }
+}
+
+export class GetFixedCostInterestsUseCase {
+  constructor(private readonly repo: IFixedCostRepository) {}
+  execute(fixedCostId: string, params?: { reference_year?: number }): Promise<FixedCostInterest[]> {
+    return this.repo.listInterests(fixedCostId, params)
+  }
+}
+
+export class CreateFixedCostInterestUseCase {
+  constructor(private readonly repo: IFixedCostRepository) {}
+  execute(fixedCostId: string, data: CreateFixedCostInterestDto): Promise<FixedCostInterest> {
+    return this.repo.createInterest(fixedCostId, data)
+  }
+}
+
+export class UpdateFixedCostInterestUseCase {
+  constructor(private readonly repo: IFixedCostRepository) {}
+  execute(fixedCostId: string, interestId: string, data: UpdateFixedCostInterestDto): Promise<FixedCostInterest> {
+    return this.repo.updateInterest(fixedCostId, interestId, data)
+  }
+}
+
+export class DeleteFixedCostInterestUseCase {
+  constructor(private readonly repo: IFixedCostRepository) {}
+  execute(fixedCostId: string, interestId: string): Promise<void> {
+    return this.repo.deleteInterest(fixedCostId, interestId)
   }
 }

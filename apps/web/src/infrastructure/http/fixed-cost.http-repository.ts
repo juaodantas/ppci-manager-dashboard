@@ -2,6 +2,9 @@ import type { AxiosInstance } from 'axios'
 import type { FixedCost } from '@manager/domain'
 import type {
   IFixedCostRepository,
+  FixedCostInterest,
+  CreateFixedCostInterestDto,
+  UpdateFixedCostInterestDto,
   CreateFixedCostDto,
   UpdateFixedCostDto,
 } from '../../domain/repositories/fixed-cost.repository'
@@ -36,5 +39,26 @@ export class FixedCostHttpRepository implements IFixedCostRepository {
 
   async delete(id: string): Promise<void> {
     await this.http.delete(`/fixed-costs/${id}`)
+  }
+
+  async listInterests(fixedCostId: string, params?: { reference_year?: number }): Promise<FixedCostInterest[]> {
+    const { data } = await this.http.get<FixedCostInterest[]>(`/fixed-costs/${fixedCostId}/interests`, {
+      params,
+    })
+    return data
+  }
+
+  async createInterest(fixedCostId: string, body: CreateFixedCostInterestDto): Promise<FixedCostInterest> {
+    const { data } = await this.http.post<FixedCostInterest>(`/fixed-costs/${fixedCostId}/interests`, body)
+    return data
+  }
+
+  async updateInterest(fixedCostId: string, interestId: string, body: UpdateFixedCostInterestDto): Promise<FixedCostInterest> {
+    const { data } = await this.http.put<FixedCostInterest>(`/fixed-costs/${fixedCostId}/interests/${interestId}`, body)
+    return data
+  }
+
+  async deleteInterest(fixedCostId: string, interestId: string): Promise<void> {
+    await this.http.delete(`/fixed-costs/${fixedCostId}/interests/${interestId}`)
   }
 }

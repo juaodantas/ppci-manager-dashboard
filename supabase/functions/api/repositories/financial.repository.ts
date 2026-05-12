@@ -1,17 +1,41 @@
 import sql from '../db.ts'
 import { FinancialEntry, FinancialReport } from '../../_shared/domain/entities/financial-entry.entity.ts'
 
-// deno-lint-ignore no-explicit-any
-function toFinancialEntry(row: Record<string, any>): FinancialEntry {
+type FinancialEntryRow = {
+  id: string
+  type: FinancialEntry['type']
+  source_type: FinancialEntry['source_type']
+  source_id: string
+  amount: number
+  date: string
+  description: string | null
+  created_at: string
+  total_count?: number
+}
+
+type FinancialSummaryRow = {
+  total_income: number
+  total_expense: number
+  balance: number
+}
+
+type FinancialMonthRow = {
+  month: string
+  income: number
+  expense: number
+  balance: number
+}
+
+function toFinancialEntry(row: FinancialEntryRow): FinancialEntry {
   return {
-    id: row.id as string,
-    type: row.type as FinancialEntry['type'],
-    source_type: row.source_type as FinancialEntry['source_type'],
-    source_id: row.source_id as string,
-    amount: row.amount as number,
-    date: row.date as string,
-    description: row.description as string | null,
-    created_at: row.created_at as string,
+    id: row.id,
+    type: row.type,
+    source_type: row.source_type,
+    source_id: row.source_id,
+    amount: row.amount,
+    date: row.date,
+    description: row.description,
+    created_at: row.created_at,
   }
 }
 
@@ -48,7 +72,7 @@ export const FinancialRepository = {
               'expense'           AS type,
               'fixed_cost'        AS source_type,
               fc.id               AS source_id,
-              fc.amount::float,
+              (fc.amount + COALESCE(fci.interest_amount, 0))::float,
               LEAST(
                 make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
                 (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
@@ -61,6 +85,10 @@ export const FinancialRepository = {
               date_trunc('month', LEAST(COALESCE(fc.end_date, ${date_to}::date), ${date_to}::date)),
               '1 month'::interval
             ) AS gs
+            LEFT JOIN fixed_cost_interests fci
+              ON fci.fixed_cost_id = fc.id
+              AND fci.reference_year = EXTRACT(year FROM gs)::int
+              AND fci.reference_month = EXTRACT(month FROM gs)::int
             WHERE fc.active = true
               AND fc.start_date <= ${date_to}::date
               AND COALESCE(fc.end_date, ${date_to}::date) >= ${date_from}::date
@@ -74,7 +102,7 @@ export const FinancialRepository = {
               'expense'           AS type,
               'variable_cost'     AS source_type,
               vc.id               AS source_id,
-              vc.amount::float,
+              (vc.amount + COALESCE(vc.interest_amount, 0))::float,
               vc.date,
               COALESCE(vc.description, vc.name) AS description,
               vc.created_at
@@ -102,8 +130,9 @@ export const FinancialRepository = {
       LIMIT ${limit} OFFSET ${offset}
     `
 
-    const total = rows.length > 0 ? (rows[0].total_count as number) : 0
-    return { entries: rows.map(toFinancialEntry), total }
+    const typedRows = rows as FinancialEntryRow[]
+    const total = typedRows.length > 0 ? (typedRows[0].total_count ?? 0) : 0
+    return { entries: typedRows.map(toFinancialEntry), total }
   },
 
   async getReport(params: { date_from: string; date_to: string; company_id?: string }): Promise<FinancialReport> {
@@ -117,19 +146,23 @@ export const FinancialRepository = {
       WHERE fe.date BETWEEN ${date_from}::date AND ${date_to}::date
       AND (${company_id ?? null}::uuid IS NULL OR pr.company_id = ${company_id ?? null}::uuid)
       UNION ALL
-      SELECT 'expense' AS type, fc.amount
+      SELECT 'expense' AS type, (fc.amount + COALESCE(fci.interest_amount, 0))::float AS amount
       FROM fixed_costs fc
       CROSS JOIN LATERAL generate_series(
         date_trunc('month', GREATEST(fc.start_date, ${date_from}::date)),
         date_trunc('month', LEAST(COALESCE(fc.end_date, ${date_to}::date), ${date_to}::date)),
         '1 month'::interval
       ) AS gs
+      LEFT JOIN fixed_cost_interests fci
+        ON fci.fixed_cost_id = fc.id
+        AND fci.reference_year = EXTRACT(year FROM gs)::int
+        AND fci.reference_month = EXTRACT(month FROM gs)::int
       WHERE fc.active = true
       AND fc.start_date <= ${date_to}::date
       AND COALESCE(fc.end_date, ${date_to}::date) >= ${date_from}::date
       AND (${company_id ?? null}::uuid IS NULL OR fc.company_id = ${company_id ?? null}::uuid)
       UNION ALL
-      SELECT 'expense' AS type, vc.amount
+      SELECT 'expense' AS type, (vc.amount + COALESCE(vc.interest_amount, 0))::float AS amount
       FROM variable_costs vc
       WHERE vc.date BETWEEN ${date_from}::date AND ${date_to}::date
       AND (${company_id ?? null}::uuid IS NULL OR vc.company_id = ${company_id ?? null}::uuid)
@@ -151,7 +184,7 @@ export const FinancialRepository = {
       UNION ALL
       SELECT
         'expense' AS type,
-        fc.amount,
+        (fc.amount + COALESCE(fci.interest_amount, 0))::float AS amount,
         LEAST(
           make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
           (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
@@ -162,6 +195,10 @@ export const FinancialRepository = {
         date_trunc('month', LEAST(COALESCE(fc.end_date, ${date_to}::date), ${date_to}::date)),
         '1 month'::interval
       ) AS gs
+      LEFT JOIN fixed_cost_interests fci
+        ON fci.fixed_cost_id = fc.id
+        AND fci.reference_year = EXTRACT(year FROM gs)::int
+        AND fci.reference_month = EXTRACT(month FROM gs)::int
       WHERE fc.active = true
       AND fc.start_date <= ${date_to}::date
       AND COALESCE(fc.end_date, ${date_to}::date) >= ${date_from}::date
@@ -169,7 +206,7 @@ export const FinancialRepository = {
       UNION ALL
       SELECT
         'expense' AS type,
-        vc.amount,
+        (vc.amount + COALESCE(vc.interest_amount, 0))::float AS amount,
         vc.date
       FROM variable_costs vc
       WHERE vc.date BETWEEN ${date_from}::date AND ${date_to}::date
@@ -186,14 +223,14 @@ export const FinancialRepository = {
     `
 
     return {
-      total_income: summary.total_income as number,
-      total_expense: summary.total_expense as number,
-      balance: summary.balance as number,
-      entries_by_month: monthRows.map((r) => ({
-        month: r.month as string,
-        income: r.income as number,
-        expense: r.expense as number,
-        balance: r.balance as number,
+      total_income: (summary as FinancialSummaryRow).total_income,
+      total_expense: (summary as FinancialSummaryRow).total_expense,
+      balance: (summary as FinancialSummaryRow).balance,
+      entries_by_month: (monthRows as FinancialMonthRow[]).map((r) => ({
+        month: r.month,
+        income: r.income,
+        expense: r.expense,
+        balance: r.balance,
       })),
     }
   },

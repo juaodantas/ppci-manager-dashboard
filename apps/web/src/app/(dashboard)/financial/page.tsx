@@ -6,12 +6,17 @@ import { Button } from '../../../presentation/components/ui/Button'
 import { Input } from '../../../presentation/components/ui/Input'
 import { Modal } from '../../../presentation/components/ui/Modal'
 import { Select } from '../../../presentation/components/ui/Select'
+import { getApiErrorMessage } from '../../../presentation/utils/api-error'
 import { useFinancialReport, useFinancialEntries } from '../../../presentation/hooks/useFinancial'
 import {
   useFixedCosts,
   useCreateFixedCost,
   useUpdateFixedCost,
   useDeleteFixedCost,
+  useFixedCostInterests,
+  useCreateFixedCostInterest,
+  useUpdateFixedCostInterest,
+  useDeleteFixedCostInterest,
 } from '../../../presentation/hooks/useFixedCosts'
 import {
   useVariableCosts,
@@ -20,8 +25,22 @@ import {
   useDeleteVariableCost,
 } from '../../../presentation/hooks/useVariableCosts'
 import { useCompanies } from '../../../presentation/hooks/useCompanies'
-import type { CreateFixedCostDto, UpdateFixedCostDto } from '../../../domain/repositories/fixed-cost.repository'
+import type {
+  CreateFixedCostDto,
+  UpdateFixedCostDto,
+  FixedCostInterest,
+  CreateFixedCostInterestDto,
+  UpdateFixedCostInterestDto,
+} from '../../../domain/repositories/fixed-cost.repository'
 import type { CreateVariableCostDto, UpdateVariableCostDto } from '../../../domain/repositories/variable-cost.repository'
+
+function getCompetenceFromDate(date: string) {
+  const parsed = new Date(`${date}T00:00:00`)
+  return {
+    year: parsed.getFullYear(),
+    month: parsed.getMonth() + 1,
+  }
+}
 
 function currentMonthRange() {
   const now = new Date()
@@ -123,14 +142,16 @@ function VariableCostForm({
   const [name, setName] = useState(initial?.name ?? '')
   const [amount, setAmount] = useState(String(initial?.amount ?? ''))
   const [date, setDate] = useState(initial?.date ?? '')
+  const [interestAmount, setInterestAmount] = useState(String(initial?.interest_amount ?? 0))
   const [category, setCategory] = useState(initial?.category ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [companyId, setCompanyId] = useState(initial?.company_id ?? '')
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ name, amount: parseFloat(amount), date, category: category || undefined, description: description || undefined, company_id: companyId || undefined }) }} className="flex flex-col gap-4">
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ name, amount: parseFloat(amount), interest_amount: parseFloat(interestAmount || '0'), date, category: category || undefined, description: description || undefined, company_id: companyId || undefined }) }} className="flex flex-col gap-4">
       <Input label="Nome *" value={name} onChange={(e) => setName(e.target.value)} required />
       <Input label="Valor *" type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+      <Input label="Juros" type="number" min="0" step="0.01" value={interestAmount} onChange={(e) => setInterestAmount(e.target.value)} required />
       <Input label="Data *" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
       <Input label="Categoria" value={category} onChange={(e) => setCategory(e.target.value)} />
       <Input label="Descrição" value={description} onChange={(e) => setDescription(e.target.value)} />
@@ -143,6 +164,81 @@ function VariableCostForm({
   )
 }
 
+function FixedCostInterestForm({
+  initial,
+  referenceYear,
+  referenceMonth,
+  onSubmit,
+  loading,
+}: {
+  initial?: FixedCostInterest
+  referenceYear: number
+  referenceMonth: number
+  onSubmit: (dto: CreateFixedCostInterestDto | UpdateFixedCostInterestDto) => Promise<void>
+  loading: boolean
+}) {
+  const [year, setYear] = useState(String(initial?.reference_year ?? referenceYear))
+  const [month, setMonth] = useState(String(initial?.reference_month ?? referenceMonth))
+  const [interestAmount, setInterestAmount] = useState(String(initial?.interest_amount ?? 0))
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        void onSubmit({
+          reference_year: parseInt(year),
+          reference_month: parseInt(month),
+          interest_amount: parseFloat(interestAmount),
+        })
+      }}
+      className="flex flex-col gap-4"
+    >
+      <Input label="Competência - Ano *" type="number" min="1900" max="9999" value={year} onChange={(e) => setYear(e.target.value)} required />
+      <Input label="Competência - Mês *" type="number" min="1" max="12" value={month} onChange={(e) => setMonth(e.target.value)} required />
+      <Input label="Valor adicional de juros *" type="number" min="0" step="0.01" value={interestAmount} onChange={(e) => setInterestAmount(e.target.value)} required />
+      <Button type="submit" loading={loading}>Salvar juros</Button>
+    </form>
+  )
+}
+
+function FixedCostRow({
+  fixedCost,
+  referenceYear,
+  referenceMonth,
+  onOpenInterestModal,
+  onEdit,
+  onDelete,
+}: {
+  fixedCost: FixedCost
+  referenceYear: number
+  referenceMonth: number
+  onOpenInterestModal: (cost: FixedCost) => void
+  onEdit: (cost: FixedCost) => void
+  onDelete: (id: string) => void
+}) {
+  const { data: interests } = useFixedCostInterests(fixedCost.id, { reference_year: referenceYear })
+  const selectedInterest = interests?.find((item) => item.reference_month === referenceMonth)
+  const interestAmount = selectedInterest?.interest_amount ?? 0
+  const totalAmount = fixedCost.amount + interestAmount
+
+  return (
+    <tr>
+      <td className="px-6 py-4 text-sm text-gray-900">{fixedCost.name}</td>
+      <td className="px-6 py-4 text-sm text-gray-500">{fixedCost.category ?? '—'}</td>
+      <td className="px-6 py-4 text-sm text-gray-500">dia {fixedCost.due_day}</td>
+      <td className="px-6 py-4 text-right text-sm text-gray-500">{interestAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+      <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">{totalAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+      <td className="px-6 py-4 text-right">
+        <div className="flex justify-end gap-2">
+          <Button size="sm" variant="secondary" onClick={() => onOpenInterestModal(fixedCost)}>Juros</Button>
+          <Button size="sm" variant="secondary" onClick={() => onEdit(fixedCost)}>Editar</Button>
+          <Button size="sm" variant="danger" onClick={() => onDelete(fixedCost.id)}>Excluir</Button>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
 export default function FinancialPage() {
   const { from, to } = currentMonthRange()
   const [dateFrom, setDateFrom] = useState(from)
@@ -152,6 +248,10 @@ export default function FinancialPage() {
   const [editingFc, setEditingFc] = useState<FixedCost | undefined>()
   const [vcModalOpen, setVcModalOpen] = useState(false)
   const [editingVc, setEditingVc] = useState<VariableCost | undefined>()
+  const [fixedCostInterestModalOpen, setFixedCostInterestModalOpen] = useState(false)
+  const [selectedFixedCost, setSelectedFixedCost] = useState<FixedCost | undefined>()
+  const [editingInterest, setEditingInterest] = useState<FixedCostInterest | undefined>()
+  const [interestError, setInterestError] = useState('')
 
   const { data: report, isLoading: reportLoading } = useFinancialReport({ date_from: dateFrom, date_to: dateTo, company_id: companyId || undefined })
   const { data: entries } = useFinancialEntries({ date_from: dateFrom, date_to: dateTo, company_id: companyId || undefined, limit: 50, offset: 0 })
@@ -164,6 +264,14 @@ export default function FinancialPage() {
   const createVc = useCreateVariableCost()
   const updateVc = useUpdateVariableCost()
   const deleteVc = useDeleteVariableCost()
+  const createFixedCostInterest = useCreateFixedCostInterest()
+  const updateFixedCostInterest = useUpdateFixedCostInterest()
+  const deleteFixedCostInterest = useDeleteFixedCostInterest()
+  const { year: competenceYear, month: competenceMonth } = getCompetenceFromDate(dateTo)
+  const { data: selectedFixedCostInterests } = useFixedCostInterests(
+    selectedFixedCost?.id ?? null,
+    { reference_year: competenceYear },
+  )
 
   const allCompanyOptions = [
     { value: '', label: 'Nenhum (custo geral)' },
@@ -191,6 +299,25 @@ export default function FinancialPage() {
       await createVc.mutateAsync(dto as CreateVariableCostDto)
     }
     setVcModalOpen(false); setEditingVc(undefined)
+  }
+
+  const handleFixedCostInterestSubmit = async (dto: CreateFixedCostInterestDto | UpdateFixedCostInterestDto) => {
+    if (!selectedFixedCost) return
+    setInterestError('')
+    try {
+      if (editingInterest) {
+        await updateFixedCostInterest.mutateAsync({
+          fixedCostId: selectedFixedCost.id,
+          interestId: editingInterest.id,
+          dto,
+        })
+      } else {
+        await createFixedCostInterest.mutateAsync({ fixedCostId: selectedFixedCost.id, dto })
+      }
+      setEditingInterest(undefined)
+    } catch (error: unknown) {
+      setInterestError(getApiErrorMessage(error, 'Erro ao salvar juros'))
+    }
   }
 
   return (
@@ -300,12 +427,14 @@ export default function FinancialPage() {
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Categoria</th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Data</th>
               <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Valor</th>
+              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Juros</th>
+              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Total</th>
               <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {(variableCosts ?? []).length === 0 && (
-              <tr><td colSpan={5} className="py-6 text-center text-gray-400">Nenhum custo variável no período</td></tr>
+              <tr><td colSpan={7} className="py-6 text-center text-gray-400">Nenhum custo variável no período</td></tr>
             )}
             {(variableCosts ?? []).map((vc) => (
               <tr key={vc.id}>
@@ -313,6 +442,8 @@ export default function FinancialPage() {
                 <td className="px-6 py-4 text-sm text-gray-500">{vc.category ?? '—'}</td>
                 <td className="px-6 py-4 text-sm text-gray-500">{new Date(vc.date).toLocaleDateString('pt-BR')}</td>
                 <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">{vc.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">{vc.interest_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">{(vc.amount + vc.interest_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
                     <Button size="sm" variant="secondary" onClick={() => { setEditingVc(vc); setVcModalOpen(true) }}>Editar</Button>
@@ -326,37 +457,44 @@ export default function FinancialPage() {
       </div>
 
       <div className="rounded-lg border border-gray-200 bg-white">
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <h2 className="font-medium text-gray-900">Custos Fixos</h2>
-          <Button size="sm" onClick={() => setFcModalOpen(true)}>+ Novo Custo Fixo</Button>
-        </div>
+          <div className="flex items-center justify-between border-b px-6 py-4">
+            <h2 className="font-medium text-gray-900">Custos Fixos</h2>
+            <p className="text-xs text-gray-500">Competência aplicada: {String(competenceMonth).padStart(2, '0')}/{competenceYear}</p>
+            <Button size="sm" onClick={() => setFcModalOpen(true)}>+ Novo Custo Fixo</Button>
+          </div>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nome</th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Categoria</th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Dia</th>
-              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Valor</th>
+              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Juros competência</th>
+              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Total</th>
               <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {(fixedCosts ?? []).length === 0 && (
-              <tr><td colSpan={5} className="py-6 text-center text-gray-400">Nenhum custo fixo cadastrado</td></tr>
+              <tr><td colSpan={6} className="py-6 text-center text-gray-400">Nenhum custo fixo cadastrado</td></tr>
             )}
             {(fixedCosts ?? []).map((fc) => (
-              <tr key={fc.id}>
-                <td className="px-6 py-4 text-sm text-gray-900">{fc.name}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{fc.category ?? '—'}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">dia {fc.due_day}</td>
-                <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">{fc.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => { setEditingFc(fc); setFcModalOpen(true) }}>Editar</Button>
-                    <Button size="sm" variant="danger" onClick={() => deleteFc.mutateAsync(fc.id)}>Excluir</Button>
-                  </div>
-                </td>
-              </tr>
+              <FixedCostRow
+                key={fc.id}
+                fixedCost={fc}
+                referenceYear={competenceYear}
+                referenceMonth={competenceMonth}
+                onOpenInterestModal={(cost) => {
+                  setSelectedFixedCost(cost)
+                  setEditingInterest(undefined)
+                  setInterestError('')
+                  setFixedCostInterestModalOpen(true)
+                }}
+                onEdit={(cost) => {
+                  setEditingFc(cost)
+                  setFcModalOpen(true)
+                }}
+                onDelete={(id) => { void deleteFc.mutateAsync(id) }}
+              />
             ))}
           </tbody>
         </table>
@@ -388,6 +526,73 @@ export default function FinancialPage() {
           loading={createVc.isPending || updateVc.isPending}
           companyOptions={allCompanyOptions}
         />
+      </Modal>
+
+      <Modal
+        open={fixedCostInterestModalOpen}
+        title={selectedFixedCost ? `Juros de ${selectedFixedCost.name}` : 'Juros por competência'}
+        onClose={() => {
+          setFixedCostInterestModalOpen(false)
+          setSelectedFixedCost(undefined)
+          setEditingInterest(undefined)
+          setInterestError('')
+        }}
+      >
+        {selectedFixedCost && (
+          <div className="flex flex-col gap-4">
+            {interestError && <p className="text-sm text-red-600">{interestError}</p>}
+            <FixedCostInterestForm
+              initial={editingInterest}
+              referenceYear={competenceYear}
+              referenceMonth={competenceMonth}
+              onSubmit={handleFixedCostInterestSubmit}
+              loading={createFixedCostInterest.isPending || updateFixedCostInterest.isPending}
+            />
+            <div className="rounded border border-gray-200">
+              <div className="border-b px-4 py-2 text-sm font-medium text-gray-700">Juros cadastrados ({competenceYear})</div>
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Competência</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium uppercase text-gray-500">Juros</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium uppercase text-gray-500">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {(selectedFixedCostInterests ?? []).length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-4 text-center text-sm text-gray-400">Nenhum juros cadastrado para o ano selecionado</td>
+                    </tr>
+                  )}
+                  {(selectedFixedCostInterests ?? []).map((interest) => (
+                    <tr key={interest.id}>
+                      <td className="px-4 py-2 text-sm text-gray-700">{String(interest.reference_month).padStart(2, '0')}/{interest.reference_year}</td>
+                      <td className="px-4 py-2 text-right text-sm text-gray-700">{interest.interest_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                      <td className="px-4 py-2 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="secondary" onClick={() => setEditingInterest(interest)}>Editar</Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={async () => {
+                              try {
+                                await deleteFixedCostInterest.mutateAsync({ fixedCostId: selectedFixedCost.id, interestId: interest.id })
+                              } catch (error: unknown) {
+                                setInterestError(getApiErrorMessage(error, 'Erro ao remover juros'))
+                              }
+                            }}
+                          >
+                            Remover
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

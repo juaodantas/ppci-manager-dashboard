@@ -211,6 +211,7 @@ export const fixedCostListQuerySchema = z.object({
 export const createVariableCostSchema = z.object({
   name: z.string().min(1, 'name is required'),
   amount: z.number().positive(),
+  interest_amount: z.number().min(0).optional(),
   date: z.string().date(),
   category: z.string().optional(),
   description: z.string().optional(),
@@ -220,10 +221,25 @@ export const createVariableCostSchema = z.object({
 export const updateVariableCostSchema = z.object({
   name: z.string().min(1).optional(),
   amount: z.number().positive().optional(),
+  interest_amount: z.number().min(0).optional(),
   date: z.string().date().optional(),
   category: z.string().optional(),
   description: z.string().optional(),
   company_id: z.string().uuid().optional().nullable(),
+})
+
+const fixedCostInterestBaseSchema = z.object({
+  reference_year: z.number().int().min(1900).max(9999),
+  reference_month: z.number().int().min(1).max(12),
+  interest_amount: z.number().min(0),
+})
+
+export const createFixedCostInterestSchema = fixedCostInterestBaseSchema
+
+export const updateFixedCostInterestSchema = fixedCostInterestBaseSchema
+
+export const fixedCostInterestListQuerySchema = z.object({
+  reference_year: z.coerce.number().int().min(1900).max(9999).optional(),
 })
 
 // Types
@@ -252,5 +268,8 @@ export type CreateFixedCostDto = z.infer<typeof createFixedCostSchema>
 export type UpdateFixedCostDto = z.infer<typeof updateFixedCostSchema>
 export type CreateVariableCostDto = z.infer<typeof createVariableCostSchema>
 export type UpdateVariableCostDto = z.infer<typeof updateVariableCostSchema>
+export type CreateFixedCostInterestDto = z.infer<typeof createFixedCostInterestSchema>
+export type UpdateFixedCostInterestDto = z.infer<typeof updateFixedCostInterestSchema>
+export type FixedCostInterestListQueryDto = z.infer<typeof fixedCostInterestListQuerySchema>
 export type CompanyCreateDto = z.infer<typeof createCompanySchema>
 export type CompanyUpdateDto = z.infer<typeof updateCompanySchema>

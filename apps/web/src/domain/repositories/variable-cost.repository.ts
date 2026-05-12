@@ -3,6 +3,7 @@ import type { VariableCost } from '@manager/domain'
 export interface CreateVariableCostDto {
   name: string
   amount: number
+  interest_amount?: number
   date: string
   category?: string
   description?: string
@@ -12,6 +13,7 @@ export interface CreateVariableCostDto {
 export interface UpdateVariableCostDto {
   name?: string
   amount?: number
+  interest_amount?: number
   date?: string
   category?: string
   description?: string

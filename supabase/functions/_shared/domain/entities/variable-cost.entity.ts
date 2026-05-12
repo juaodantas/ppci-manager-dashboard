@@ -2,6 +2,7 @@ export interface VariableCost {
   id: string
   name: string
   amount: number
+  interest_amount: number
   date: string
   category?: string | null
   description?: string | null

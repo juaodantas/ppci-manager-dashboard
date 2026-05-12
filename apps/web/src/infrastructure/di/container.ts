@@ -70,6 +70,10 @@ import {
   CreateFixedCostUseCase,
   UpdateFixedCostUseCase,
   DeleteFixedCostUseCase,
+  GetFixedCostInterestsUseCase,
+  CreateFixedCostInterestUseCase,
+  UpdateFixedCostInterestUseCase,
+  DeleteFixedCostInterestUseCase,
 } from '../../application/use-cases/fixed-cost/fixed-cost.use-cases'
 import {
   GetVariableCostsUseCase,
@@ -176,6 +180,10 @@ export const container = {
     create: new CreateFixedCostUseCase(fixedCostRepo),
     update: new UpdateFixedCostUseCase(fixedCostRepo),
     delete: new DeleteFixedCostUseCase(fixedCostRepo),
+    listInterests: new GetFixedCostInterestsUseCase(fixedCostRepo),
+    createInterest: new CreateFixedCostInterestUseCase(fixedCostRepo),
+    updateInterest: new UpdateFixedCostInterestUseCase(fixedCostRepo),
+    deleteInterest: new DeleteFixedCostInterestUseCase(fixedCostRepo),
   },
 
   variableCosts: {

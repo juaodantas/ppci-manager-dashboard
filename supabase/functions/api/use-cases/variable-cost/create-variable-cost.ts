@@ -6,6 +6,7 @@ export async function createVariableCost(dto: CreateVariableCostDto): Promise<Va
   return VariableCostRepository.save({
     name: dto.name,
     amount: dto.amount,
+    interest_amount: dto.interest_amount,
     date: dto.date,
     category: dto.category,
     description: dto.description,
