@@ -1,5 +1,5 @@
 import type { AxiosInstance } from 'axios'
-import type { FinancialEntry, FinancialReport } from '@manager/domain'
+import type { FinancialAnalytics, FinancialEntry, FinancialReport } from '@manager/domain'
 import type { IFinancialRepository } from '../../domain/repositories/financial.repository'
 
 export class FinancialHttpRepository implements IFinancialRepository {
@@ -22,6 +22,16 @@ export class FinancialHttpRepository implements IFinancialRepository {
 
   async getReport(params: { date_from: string; date_to: string; company_id?: string }): Promise<FinancialReport> {
     const { data } = await this.http.get<FinancialReport>('/financial/report', { params })
+    return data
+  }
+
+  async getAnalytics(params: {
+    company_id: string
+    date_from: string
+    date_to: string
+    horizon_months?: number
+  }): Promise<FinancialAnalytics> {
+    const { data } = await this.http.get<FinancialAnalytics>('/financial/analytics', { params })
     return data
   }
 }

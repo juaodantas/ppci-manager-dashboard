@@ -242,6 +242,15 @@ export const fixedCostInterestListQuerySchema = z.object({
   reference_year: z.coerce.number().int().min(1900).max(9999).optional(),
 })
 
+export const financialAnalyticsQuerySchema = z.object({
+  company_id: z.string().uuid(),
+  date_from: z.string().date(),
+  date_to: z.string().date(),
+  horizon_months: z.coerce.number().int().min(1).max(12).default(12),
+}).refine((data) => data.date_to >= data.date_from, {
+  message: 'date_to must be greater than or equal to date_from',
+})
+
 // Types
 export type RefreshDto = z.infer<typeof refreshSchema>
 export type RegisterDto = z.infer<typeof registerSchema>
@@ -273,3 +282,4 @@ export type UpdateFixedCostInterestDto = z.infer<typeof updateFixedCostInterestS
 export type FixedCostInterestListQueryDto = z.infer<typeof fixedCostInterestListQuerySchema>
 export type CompanyCreateDto = z.infer<typeof createCompanySchema>
 export type CompanyUpdateDto = z.infer<typeof updateCompanySchema>
+export type FinancialAnalyticsQueryDto = z.infer<typeof financialAnalyticsQuerySchema>

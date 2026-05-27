@@ -32,3 +32,27 @@ export function useFinancialReport(params: { date_from: string; date_to: string;
     enabled: !!params.date_from && !!params.date_to,
   })
 }
+
+export function useFinancialAnalytics(params: {
+  company_id?: string
+  date_from: string
+  date_to: string
+  horizon_months?: number
+}) {
+  return useQuery({
+    queryKey: ['financial', 'analytics', params],
+    queryFn: () => {
+      if (!params.company_id) {
+        throw new Error('company_id is required')
+      }
+
+      return container.financial.analytics.execute({
+        company_id: params.company_id,
+        date_from: params.date_from,
+        date_to: params.date_to,
+        horizon_months: params.horizon_months,
+      })
+    },
+    enabled: !!params.company_id && !!params.date_from && !!params.date_to,
+  })
+}

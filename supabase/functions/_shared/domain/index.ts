@@ -24,6 +24,10 @@ export {
   type EntrySourceType,
   type FinancialEntry,
   type FinancialReport,
+  type FinancialAnalytics,
+  type FinancialHistoricalMonth,
+  type FinancialExpenseCompositionMonth,
+  type FinancialForecastMonth,
 } from './entities/financial-entry.entity.ts'
 
 // Value Objects

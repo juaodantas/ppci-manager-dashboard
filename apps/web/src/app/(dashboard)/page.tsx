@@ -26,33 +26,39 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-sm text-gray-500">Resumo rápido do desempenho do seu escritório.</p>
+      </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Clientes" value={totalCustomers} />
         <StatCard label="Projetos" value={totalProjects} />
         <StatCard label="Em Andamento" value={inProgressProjects} />
         <StatCard label="Orçamentos" value={totalQuotes} />
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <Link
           href="/customers"
-          className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+          className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
         >
-          Ver Clientes →
+          Ver Clientes
+          <span aria-hidden="true">→</span>
         </Link>
         <Link
           href="/projects"
-          className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+          className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
         >
-          Ver Projetos →
+          Ver Projetos
+          <span aria-hidden="true">→</span>
         </Link>
         <Link
           href="/quotes"
-          className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+          className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
         >
-          Ver Orçamentos →
+          Ver Orçamentos
+          <span aria-hidden="true">→</span>
         </Link>
       </div>
     </div>

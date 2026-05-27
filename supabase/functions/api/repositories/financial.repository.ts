@@ -1,5 +1,17 @@
 import sql from '../db.ts'
-import { FinancialEntry, FinancialReport } from '../../_shared/domain/entities/financial-entry.entity.ts'
+import { FinancialAnalytics, FinancialEntry, FinancialReport } from '../../_shared/domain/entities/financial-entry.entity.ts'
+import { gatewayTimeout } from '../errors.ts'
+import {
+  addMonths,
+  average,
+  buildHistoricalBase,
+  formatMonth,
+  listMonths,
+  monthStart,
+  percentageMonthOverMonth,
+  resolveTrendValues,
+  type HistoricalSourceRow,
+} from './financial-analytics.logic.ts'
 
 type FinancialEntryRow = {
   id: string
@@ -24,6 +36,26 @@ type FinancialMonthRow = {
   income: number
   expense: number
   balance: number
+}
+
+type ForecastIncomeRow = {
+  month: string
+  pending_income: number
+}
+
+type ForecastFixedExpenseRow = {
+  month: string
+  fixed_expense: number
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, action: string): Promise<T> {
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    const timer = setTimeout(() => {
+      clearTimeout(timer)
+      reject(gatewayTimeout(`Database timeout while ${action}`))
+    }, timeoutMs)
+  })
+  return await Promise.race([promise, timeoutPromise])
 }
 
 function toFinancialEntry(row: FinancialEntryRow): FinancialEntry {
@@ -232,6 +264,194 @@ export const FinancialRepository = {
         expense: r.expense,
         balance: r.balance,
       })),
+    }
+  },
+
+  async getAnalytics(params: {
+    company_id: string
+    date_from: string
+    date_to: string
+    horizon_months: number
+  }): Promise<FinancialAnalytics> {
+    const { company_id, date_from, date_to, horizon_months } = params
+    const queryTimeoutMs = 4_000
+
+    const [historicalRows, pendingIncomeRows, forecastFixedExpenseRows] = await Promise.all([
+      withTimeout(sql`
+        WITH payment_income_by_month AS (
+          SELECT
+            date_trunc('month', fe.date)::date::text AS month,
+            COALESCE(SUM(fe.amount), 0)::float AS income
+          FROM financial_entries fe
+          JOIN payments p ON p.id = fe.source_id AND fe.source_type = 'payment'
+          JOIN projects pr ON pr.id = p.project_id
+          WHERE fe.type = 'income'
+            AND pr.company_id = ${company_id}::uuid
+            AND fe.date BETWEEN ${date_from}::date AND ${date_to}::date
+          GROUP BY date_trunc('month', fe.date)
+        ),
+        fixed_cost_by_month AS (
+          SELECT
+            date_trunc('month', LEAST(
+              make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
+              (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
+            ))::date::text AS month,
+            COALESCE(SUM(fc.amount + COALESCE(fci.interest_amount, 0)), 0)::float AS fixed_expense
+          FROM fixed_costs fc
+          CROSS JOIN LATERAL generate_series(
+            date_trunc('month', GREATEST(fc.start_date, ${date_from}::date)),
+            date_trunc('month', LEAST(COALESCE(fc.end_date, ${date_to}::date), ${date_to}::date)),
+            '1 month'::interval
+          ) AS gs
+          LEFT JOIN fixed_cost_interests fci
+            ON fci.fixed_cost_id = fc.id
+            AND fci.reference_year = EXTRACT(year FROM gs)::int
+            AND fci.reference_month = EXTRACT(month FROM gs)::int
+          WHERE fc.active = true
+            AND fc.start_date <= ${date_to}::date
+            AND COALESCE(fc.end_date, ${date_to}::date) >= ${date_from}::date
+            AND fc.company_id = ${company_id}::uuid
+          GROUP BY date_trunc('month', LEAST(
+            make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
+            (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
+          ))
+        ),
+        variable_cost_by_month AS (
+          SELECT
+            date_trunc('month', vc.date)::date::text AS month,
+            COALESCE(SUM(vc.amount + COALESCE(vc.interest_amount, 0)), 0)::float AS variable_expense
+          FROM variable_costs vc
+          WHERE vc.company_id = ${company_id}::uuid
+            AND vc.date BETWEEN ${date_from}::date AND ${date_to}::date
+          GROUP BY date_trunc('month', vc.date)
+        )
+        SELECT
+          month,
+          income,
+          fixed_expense,
+          variable_expense
+        FROM (
+          SELECT month, income, 0::float AS fixed_expense, 0::float AS variable_expense FROM payment_income_by_month
+          UNION ALL
+          SELECT month, 0::float AS income, fixed_expense, 0::float AS variable_expense FROM fixed_cost_by_month
+          UNION ALL
+          SELECT month, 0::float AS income, 0::float AS fixed_expense, variable_expense FROM variable_cost_by_month
+        ) by_source
+      ` as Promise<HistoricalSourceRow[]>, queryTimeoutMs, 'loading historical analytics'),
+      withTimeout(sql`
+        SELECT
+          date_trunc('month', p.due_date)::date::text AS month,
+          COALESCE(SUM(p.amount), 0)::float AS pending_income
+        FROM payments p
+        JOIN projects pr ON pr.id = p.project_id
+        WHERE pr.company_id = ${company_id}::uuid
+          AND p.status = 'pending'
+          AND p.due_date IS NOT NULL
+          AND p.due_date >= date_trunc('month', ${date_to}::date + interval '1 month')::date
+          AND p.due_date < date_trunc('month', ${date_to}::date + (${horizon_months}::int + 1) * interval '1 month')::date
+        GROUP BY date_trunc('month', p.due_date)
+      ` as Promise<ForecastIncomeRow[]>, queryTimeoutMs, 'loading pending forecast income'),
+      withTimeout(sql`
+        SELECT
+          date_trunc('month', LEAST(
+            make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
+            (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
+          ))::date::text AS month,
+          COALESCE(SUM(fc.amount + COALESCE(fci.interest_amount, 0)), 0)::float AS fixed_expense
+        FROM fixed_costs fc
+        CROSS JOIN LATERAL generate_series(
+          date_trunc('month', ${date_to}::date + interval '1 month'),
+          date_trunc('month', ${date_to}::date + ${horizon_months}::int * interval '1 month'),
+          '1 month'::interval
+        ) AS gs
+        LEFT JOIN fixed_cost_interests fci
+          ON fci.fixed_cost_id = fc.id
+          AND fci.reference_year = EXTRACT(year FROM gs)::int
+          AND fci.reference_month = EXTRACT(month FROM gs)::int
+        WHERE fc.active = true
+          AND fc.company_id = ${company_id}::uuid
+          AND fc.start_date <= (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
+          AND COALESCE(fc.end_date, (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date) >= date_trunc('month', gs)::date
+        GROUP BY date_trunc('month', LEAST(
+          make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
+          (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
+        ))
+      ` as Promise<ForecastFixedExpenseRow[]>, queryTimeoutMs, 'loading fixed expense forecast')
+    ])
+
+    const periodMonths = listMonths(date_from, date_to)
+    const historicalBase = buildHistoricalBase(periodMonths, historicalRows)
+
+    const historical_by_month = historicalBase.map((current, index) => {
+      const previous = index > 0 ? historicalBase[index - 1] : null
+      return {
+        month: current.month,
+        income: current.income,
+        expense: current.expense,
+        balance: current.balance,
+        mom_income_pct: previous ? percentageMonthOverMonth(current.income, previous.income) : null,
+        mom_expense_pct: previous ? percentageMonthOverMonth(current.expense, previous.expense) : null,
+        mom_balance_pct: previous ? percentageMonthOverMonth(current.balance, previous.balance) : null,
+      }
+    })
+
+    const expense_composition_by_month = historicalBase.map((current) => {
+      const totalExpense = current.expense
+      if (totalExpense === 0) {
+        return {
+          month: current.month,
+          fixed_expense: current.fixed_expense,
+          variable_expense: current.variable_expense,
+          fixed_share_pct: 0,
+          variable_share_pct: 0,
+        }
+      }
+
+      return {
+        month: current.month,
+        fixed_expense: current.fixed_expense,
+        variable_expense: current.variable_expense,
+        fixed_share_pct: (current.fixed_expense / totalExpense) * 100,
+        variable_share_pct: (current.variable_expense / totalExpense) * 100,
+      }
+    })
+
+    const { trendIncome, trendVariableExpense } = resolveTrendValues(historicalBase)
+
+    const pendingIncomeByMonth = new Map<string, number>()
+    for (const row of pendingIncomeRows) {
+      pendingIncomeByMonth.set(row.month.slice(0, 10), row.pending_income)
+    }
+
+    const fixedExpenseByMonth = new Map<string, number>()
+    for (const row of forecastFixedExpenseRows) {
+      fixedExpenseByMonth.set(row.month.slice(0, 10), row.fixed_expense)
+    }
+
+    const forecastMonths = Array.from({ length: horizon_months }, (_, index) =>
+      formatMonth(addMonths(monthStart(date_to), index + 1)),
+    )
+
+    const forecast_by_month = forecastMonths.map((month) => {
+      const pendingIncome = pendingIncomeByMonth.get(month) ?? 0
+      const forecast_income = pendingIncome + trendIncome
+      const fixedExpense = fixedExpenseByMonth.get(month) ?? 0
+      const forecast_expense = fixedExpense + trendVariableExpense
+      const forecast_balance = forecast_income - forecast_expense
+
+      return {
+        month,
+        forecast_income,
+        forecast_expense,
+        forecast_balance,
+        is_negative_balance: forecast_balance < 0,
+      }
+    })
+
+    return {
+      historical_by_month,
+      expense_composition_by_month,
+      forecast_by_month,
     }
   },
 }

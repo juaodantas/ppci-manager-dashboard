@@ -42,9 +42,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm rounded-xl bg-white p-8 shadow-md">
-        <h1 className="mb-6 text-center text-2xl font-bold text-gray-900">Entrar</h1>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-10">
+      <main
+        className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-8 shadow-sm"
+        aria-labelledby="login-title"
+      >
+        <div className="mb-6 text-center">
+          <p className="text-sm font-medium text-blue-600">Bem-vindo de volta</p>
+          <h1 id="login-title" className="mt-2 text-2xl font-semibold text-gray-900">
+            Entrar na sua conta
+          </h1>
+          <p className="mt-2 text-sm text-gray-500">Acesse seus projetos e acompanhe seus prazos.</p>
+        </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
             label="Email"
@@ -52,7 +61,10 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            autoFocus
+            autoComplete="email"
+            name="email"
+            spellCheck={false}
+            error={errors.email}
           />
           <Input
             label="Senha"
@@ -60,21 +72,28 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            autoComplete="current-password"
+            name="password"
+            spellCheck={false}
+            error={errors.password}
           />
-          {errors.email && <p className="-mt-2 text-xs text-red-600">{errors.email}</p>}
-          {errors.password && <p className="-mt-2 text-xs text-red-600">{errors.password}</p>}
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <Button type="submit" loading={loading} className="mt-2 w-full">
+          <div aria-live="assertive" className="min-h-[1.5rem] text-sm text-red-600">
+            {error}
+          </div>
+          <Button type="submit" loading={loading} className="mt-1 w-full">
             Entrar
           </Button>
         </form>
-        <p className="mt-4 text-center text-sm text-gray-600">
+        <p className="mt-5 text-center text-sm text-gray-600">
           Não tem conta?{' '}
-          <Link href="/register" className="text-blue-600 hover:underline">
+          <Link
+            href="/register"
+            className="font-medium text-blue-600 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
             Criar conta
           </Link>
         </p>
-      </div>
+      </main>
     </div>
   )
 }

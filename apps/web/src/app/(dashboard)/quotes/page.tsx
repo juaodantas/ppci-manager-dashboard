@@ -67,6 +67,7 @@ function QuotesContent() {
 
       <div className="w-48">
         <Select
+          label="Filtrar por status"
           options={STATUS_OPTIONS}
           value={status}
           onChange={(e) => { setStatus(e.target.value); setPage(0) }}

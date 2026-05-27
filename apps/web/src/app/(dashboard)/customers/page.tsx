@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import type { Customer } from '@manager/domain'
 import { Button } from '../../../presentation/components/ui/Button'
 import { Modal } from '../../../presentation/components/ui/Modal'
 import { Input } from '../../../presentation/components/ui/Input'
+import { ConfirmDialog } from '../../../presentation/components/ui/ConfirmDialog'
 import {
   useCustomers,
   useCreateCustomer,
@@ -39,10 +41,29 @@ function CustomerForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <Input label="Nome *" value={name} onChange={(e) => setName(e.target.value)} required />
-      <Input label="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      <Input label="Telefone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-      <Input label="CPF/CNPJ" value={document} onChange={(e) => setDocument(e.target.value)} />
+      <Input label="Nome" value={name} onChange={(e) => setName(e.target.value)} required />
+      <Input
+        label="E-mail"
+        type="email"
+        autoComplete="email"
+        placeholder="ex: contato@empresa.com…"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <Input
+        label="Telefone"
+        type="tel"
+        autoComplete="tel"
+        placeholder="ex: (11) 91234-5678…"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+      />
+      <Input
+        label="CPF/CNPJ"
+        placeholder="ex: 123.456.789-00…"
+        value={document}
+        onChange={(e) => setDocument(e.target.value)}
+      />
       <div className="flex justify-end gap-3 pt-2">
         <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
         <Button type="submit" loading={loading}>Salvar</Button>
@@ -51,12 +72,27 @@ function CustomerForm({
   )
 }
 
-export default function CustomersPage() {
-  const [page, setPage] = useState(0)
+function CustomersContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const rawSearch = searchParams.get('search') ?? ''
+  const rawPage = Number(searchParams.get('page') ?? '1')
+  const safeInitialPage = Number.isNaN(rawPage) ? 0 : Math.max(0, rawPage - 1)
+  const [page, setPage] = useState(safeInitialPage)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Customer | undefined>()
-  const [searchInput, setSearchInput] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [searchInput, setSearchInput] = useState(rawSearch)
+  const [debouncedSearch, setDebouncedSearch] = useState(rawSearch.trim())
+  const [deleteTarget, setDeleteTarget] = useState<Customer | undefined>()
+
+  useEffect(() => {
+    setSearchInput(rawSearch)
+  }, [rawSearch])
+
+  useEffect(() => {
+    const nextPage = Number.isNaN(rawPage) ? 0 : Math.max(0, rawPage - 1)
+    setPage(nextPage)
+  }, [rawPage])
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -64,6 +100,25 @@ export default function CustomersPage() {
     }, 400)
     return () => clearTimeout(handler)
   }, [searchInput])
+
+  const queryString = useMemo(() => {
+    const params = new URLSearchParams()
+    if (debouncedSearch) {
+      params.set('search', debouncedSearch)
+    }
+    if (page > 0) {
+      params.set('page', String(page + 1))
+    }
+    const value = params.toString()
+    return value ? `?${value}` : ''
+  }, [debouncedSearch, page])
+
+  useEffect(() => {
+    const currentQuery = searchParams.toString()
+    const currentQueryString = currentQuery ? `?${currentQuery}` : ''
+    if (queryString === currentQueryString) return
+    router.replace(`/customers${queryString}`)
+  }, [queryString, router, searchParams])
 
   const { data, isLoading, isFetching } = useCustomers({
     limit: PAGE_SIZE,
@@ -88,23 +143,24 @@ export default function CustomersPage() {
     setEditing(undefined)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Confirma a exclusão do cliente?')) return
-    await del.mutateAsync(id)
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+    await del.mutateAsync(deleteTarget.id)
+    setDeleteTarget(undefined)
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
         <Button onClick={() => setModalOpen(true)}>Novo Cliente</Button>
       </div>
 
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="w-full max-w-md">
           <Input
             label="Buscar por nome"
-            placeholder="Digite o nome do cliente"
+            placeholder="Digite o nome do cliente…"
             value={searchInput}
             onChange={(e) => {
               setSearchInput(e.target.value)
@@ -113,11 +169,12 @@ export default function CustomersPage() {
           />
         </div>
         {isFetching && (
-          <span className="text-sm text-gray-400">Atualizando...</span>
+          <span className="text-sm text-gray-400">Atualizando…</span>
         )}
       </div>
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <table className="min-w-full divide-y divide-gray-200">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full min-w-[720px] divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nome</th>
@@ -129,7 +186,7 @@ export default function CustomersPage() {
           <tbody className="divide-y divide-gray-200">
             {isLoading ? (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-gray-400">Carregando...</td>
+                <td colSpan={4} className="py-8 text-center text-gray-400">Carregando…</td>
               </tr>
             ) : (
               <>
@@ -141,14 +198,28 @@ export default function CustomersPage() {
                 {customers.map((c) => (
                   <tr key={c.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      <Link href={`/customers/${c.id}`} className="text-blue-600 hover:underline">{c.name}</Link>
+                      <Link
+                        href={`/customers/${c.id}`}
+                        className="block max-w-[260px] truncate text-blue-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                        title={c.name}
+                      >
+                        {c.name}
+                      </Link>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{c.email ?? c.phone ?? '—'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{c.document ?? '—'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      <span className="block max-w-[240px] truncate" title={c.email ?? c.phone ?? ''}>
+                        {c.email ?? c.phone ?? '—'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      <span className="block max-w-[200px] truncate" title={c.document ?? ''}>
+                        {c.document ?? '—'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         <Button size="sm" variant="secondary" onClick={() => { setEditing(c); setModalOpen(true) }}>Editar</Button>
-                        <Button size="sm" variant="danger" onClick={() => handleDelete(c.id)}>Excluir</Button>
+                        <Button size="sm" variant="danger" onClick={() => setDeleteTarget(c)}>Excluir</Button>
                       </div>
                     </td>
                   </tr>
@@ -156,7 +227,8 @@ export default function CustomersPage() {
               </>
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
 
       {!isLoading && total > PAGE_SIZE && (
@@ -181,6 +253,26 @@ export default function CustomersPage() {
           loading={create.isPending || update.isPending}
         />
       </Modal>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Excluir cliente"
+        description={deleteTarget ? `Deseja realmente excluir o cliente "${deleteTarget.name}"?` : undefined}
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        variant="danger"
+        loading={del.isPending}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(undefined)}
+      />
     </div>
+  )
+}
+
+export default function CustomersPage() {
+  return (
+    <Suspense fallback={<div className="py-12 text-center text-gray-500">Carregando…</div>}>
+      <CustomersContent />
+    </Suspense>
   )
 }

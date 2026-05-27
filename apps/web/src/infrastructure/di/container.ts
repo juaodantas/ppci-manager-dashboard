@@ -82,6 +82,7 @@ import {
   DeleteVariableCostUseCase,
 } from '../../application/use-cases/variable-cost/variable-cost.use-cases'
 import {
+  GetFinancialAnalyticsUseCase,
   GetFinancialEntriesUseCase,
   GetFinancialReportUseCase,
 } from '../../application/use-cases/financial/financial.use-cases'
@@ -89,10 +90,21 @@ import {
 const tokenStorage = new LocalStorageToken()
 
 const authRepoRef: { repo: AuthHttpRepository | null } = { repo: null }
+const sessionExpiredRef: { handler: (() => void) | null } = { handler: null }
 
-const http = createAxiosInstance(tokenStorage, () => {
-  const refreshUseCase = new RefreshTokenUseCase(authRepoRef.repo!, tokenStorage)
-  return refreshUseCase.execute()
+const refreshUseCase = new RefreshTokenUseCase(authRepoRef.repo!, tokenStorage)
+let refreshInFlight: Promise<string> | null = null
+const refreshWithLock = () => {
+  if (!refreshInFlight) {
+    refreshInFlight = refreshUseCase.execute().finally(() => {
+      refreshInFlight = null
+    })
+  }
+  return refreshInFlight
+}
+
+const http = createAxiosInstance(tokenStorage, refreshWithLock, {
+  onSessionExpired: () => sessionExpiredRef.handler?.(),
 })
 
 authRepoRef.repo = new AuthHttpRepository(http)
@@ -111,11 +123,18 @@ const financialRepo = new FinancialHttpRepository(http)
 export const container = {
   tokenStorage,
 
+  session: {
+    setSessionExpiredHandler(handler: (() => void) | null) {
+      sessionExpiredRef.handler = handler
+    },
+  },
+
   auth: {
     login: new LoginUseCase(authRepo, tokenStorage),
     register: new RegisterUseCase(authRepo, tokenStorage),
     logout: new LogoutUseCase(authRepo, tokenStorage),
-    refresh: new RefreshTokenUseCase(authRepo, tokenStorage),
+    refresh: refreshUseCase,
+    refreshWithLock,
   },
 
   user: new GetUsersUseCase(userRepo),
@@ -196,5 +215,6 @@ export const container = {
   financial: {
     entries: new GetFinancialEntriesUseCase(financialRepo),
     report: new GetFinancialReportUseCase(financialRepo),
+    analytics: new GetFinancialAnalyticsUseCase(financialRepo),
   },
 }

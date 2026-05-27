@@ -341,6 +341,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         {!isFinished && (
           <div className="col-span-3 flex items-center gap-3">
             <Select
+              label="Atualizar status do projeto"
               options={STATUS_OPTIONS}
               value={newStatus || project.status}
               onChange={(e) => setNewStatus(e.target.value)}

@@ -1,7 +1,9 @@
 import { Hono } from 'npm:hono'
 import { authMiddleware } from '../middleware/auth.ts'
 import { FinancialRepository } from '../repositories/financial.repository.ts'
-import { HttpError } from '../errors.ts'
+import { badRequest, forbidden, HttpError } from '../errors.ts'
+import { financialAnalyticsQuerySchema } from '../validation/schemas.ts'
+import { isCompanyInScope } from './financial-analytics.auth.ts'
 
 const financial = new Hono()
 financial.use('*', authMiddleware)
@@ -35,6 +37,33 @@ financial.get('/report', async (c) => {
   try {
     const report = await FinancialRepository.getReport({ date_from, date_to, company_id })
     return c.json(report)
+  } catch (err) {
+    if (err instanceof HttpError) return c.json({ error: err.message }, err.status)
+    throw err
+  }
+})
+
+financial.get('/analytics', async (c) => {
+  try {
+    const queryParse = financialAnalyticsQuerySchema.safeParse({
+      company_id: c.req.query('company_id'),
+      date_from: c.req.query('date_from'),
+      date_to: c.req.query('date_to'),
+      horizon_months: c.req.query('horizon_months'),
+    })
+
+    if (!queryParse.success) {
+      const message = queryParse.error.errors[0]?.message ?? 'Invalid query parameters'
+      throw badRequest(message)
+    }
+
+    const payload = (c.get('jwtPayload') ?? {}) as { company_id?: string; company_ids?: string[] }
+    if (!isCompanyInScope(payload, queryParse.data.company_id)) {
+      throw forbidden('company_id is outside your scope')
+    }
+
+    const analytics = await FinancialRepository.getAnalytics(queryParse.data)
+    return c.json(analytics)
   } catch (err) {
     if (err instanceof HttpError) return c.json({ error: err.message }, err.status)
     throw err

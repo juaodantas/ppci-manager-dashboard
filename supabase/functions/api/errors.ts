@@ -23,3 +23,11 @@ export function unauthorized(message = 'Invalid credentials'): HttpError {
 export function badRequest(message: string): HttpError {
   return new HttpError(400, message)
 }
+
+export function forbidden(message = 'Forbidden'): HttpError {
+  return new HttpError(403, message)
+}
+
+export function gatewayTimeout(message = 'Upstream timeout'): HttpError {
+  return new HttpError(504, message)
+}

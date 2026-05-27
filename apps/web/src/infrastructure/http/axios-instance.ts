@@ -1,7 +1,20 @@
 import axios from 'axios'
+import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import type { IAuthTokenPort } from '../../application/ports/auth-token.port'
 
-export function createAxiosInstance(tokenPort: IAuthTokenPort, onRefresh: () => Promise<string>) {
+interface RetriableRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean
+}
+
+interface AxiosInstanceOptions {
+  onSessionExpired?: () => void
+}
+
+export function createAxiosInstance(
+  tokenPort: IAuthTokenPort,
+  onRefresh: () => Promise<string>,
+  options: AxiosInstanceOptions = {},
+) {
   const instance = axios.create({
     baseURL:
       process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:54321/functions/v1/api',
@@ -19,24 +32,22 @@ export function createAxiosInstance(tokenPort: IAuthTokenPort, onRefresh: () => 
   // Serializes concurrent refresh attempts so only one runs at a time
   let refreshPromise: Promise<string> | null = null
 
-  function redirectToLogin() {
+  function notifySessionExpired() {
     tokenPort.clear()
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login'
-    }
+    options.onSessionExpired?.()
   }
 
   instance.interceptors.response.use(
     (response) => response,
-    async (error) => {
-      const original = error.config
+    async (error: AxiosError) => {
+      const original = error.config as RetriableRequestConfig | undefined
 
       // Never interfere with auth endpoints (login, register, refresh)
       if (original?.url?.includes('/auth/')) {
         return Promise.reject(error)
       }
 
-      if (error.response?.status === 401 && !original._retry) {
+      if (error.response?.status === 401 && original && !original._retry) {
         original._retry = true
         try {
           // Reuse an in-flight refresh so parallel 401s don't trigger multiple refreshes
@@ -46,8 +57,9 @@ export function createAxiosInstance(tokenPort: IAuthTokenPort, onRefresh: () => 
           const newToken = await refreshPromise
           original.headers.Authorization = `Bearer ${newToken}`
           return instance(original)
-        } catch {
-          redirectToLogin()
+        } catch (refreshError) {
+          notifySessionExpired()
+          return Promise.reject(refreshError)
         }
       }
 

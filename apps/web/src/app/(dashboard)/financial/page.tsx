@@ -1,13 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { FixedCost, VariableCost } from '@manager/domain'
-import { Button } from '../../../presentation/components/ui/Button'
-import { Input } from '../../../presentation/components/ui/Input'
 import { Modal } from '../../../presentation/components/ui/Modal'
-import { Select } from '../../../presentation/components/ui/Select'
+import { ConfirmDialog } from '../../../presentation/components/ui/ConfirmDialog'
+import { FinancialGraphs } from '../../../presentation/components/financial/FinancialGraphs'
+import { FinancialFiltersBar } from '../../../presentation/components/financial/FinancialFiltersBar'
+import { FinancialTabs } from '../../../presentation/components/financial/FinancialTabs'
+import { FinancialReportSummaryCards } from '../../../presentation/components/financial/FinancialReportSummaryCards'
+import { FinancialMonthlyTable } from '../../../presentation/components/financial/FinancialMonthlyTable'
+import { FinancialEntriesTable } from '../../../presentation/components/financial/FinancialEntriesTable'
+import { VariableCostsSection } from '../../../presentation/components/financial/VariableCostsSection'
+import { FixedCostsSection } from '../../../presentation/components/financial/FixedCostsSection'
+import { FixedCostForm } from '../../../presentation/components/financial/FixedCostForm'
+import { VariableCostForm } from '../../../presentation/components/financial/VariableCostForm'
+import { FixedCostInterestForm } from '../../../presentation/components/financial/FixedCostInterestForm'
+import { FixedCostInterestSection } from '../../../presentation/components/financial/FixedCostInterestSection'
 import { getApiErrorMessage } from '../../../presentation/utils/api-error'
-import { useFinancialReport, useFinancialEntries } from '../../../presentation/hooks/useFinancial'
+import { useFinancialAnalytics, useFinancialReport, useFinancialEntries } from '../../../presentation/hooks/useFinancial'
 import {
   useFixedCosts,
   useCreateFixedCost,
@@ -50,193 +60,8 @@ function currentMonthRange() {
   return { from, to }
 }
 
-function formatLocalDate(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-function FixedCostForm({
-  initial,
-  onSubmit,
-  onCancel,
-  loading,
-  companyOptions,
-}: {
-  initial?: FixedCost
-  onSubmit: (dto: CreateFixedCostDto) => void
-  onCancel: () => void
-  loading: boolean
-  companyOptions: { value: string; label: string }[]
-}) {
-  const [name, setName] = useState(initial?.name ?? '')
-  const [amount, setAmount] = useState(String(initial?.amount ?? ''))
-  const [dueDay, setDueDay] = useState(String(initial?.due_day ?? ''))
-  const [category, setCategory] = useState(initial?.category ?? '')
-  const [companyId, setCompanyId] = useState(initial?.company_id ?? '')
-  const [startDate, setStartDate] = useState(
-    initial?.start_date ?? formatLocalDate(new Date()),
-  )
-  const [endDate, setEndDate] = useState(initial?.end_date ?? '')
-  const [isIndeterminate, setIsIndeterminate] = useState(initial?.end_date == null)
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault()
-        onSubmit({
-          name,
-          amount: parseFloat(amount),
-          due_day: parseInt(dueDay),
-          category: category || undefined,
-          start_date: startDate,
-          end_date: endDate === '' ? null : endDate,
-          company_id: companyId || undefined,
-        })
-      }}
-      className="flex flex-col gap-4"
-    >
-      <Input label="Nome *" value={name} onChange={(e) => setName(e.target.value)} required />
-      <Input label="Valor *" type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
-      <Input label="Dia de vencimento *" type="number" min="1" max="31" value={dueDay} onChange={(e) => setDueDay(e.target.value)} required />
-      <Input label="Categoria" value={category} onChange={(e) => setCategory(e.target.value)} />
-      <Select label="Empresa" options={companyOptions} value={companyId} onChange={(e) => setCompanyId(e.target.value)} />
-      <Input label="Início da vigência *" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
-      <div className="flex flex-col gap-2">
-        <label className="flex items-center gap-2 text-sm text-gray-600">
-          <input
-            type="checkbox"
-            checked={isIndeterminate}
-            onChange={(e) => setIsIndeterminate(e.target.checked)}
-            className="rounded"
-          />
-          Indeterminado
-        </label>
-        <Input
-          label="Fim da vigência"
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          disabled={isIndeterminate}
-        />
-      </div>
-      <div className="flex justify-end gap-3">
-        <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" loading={loading}>Salvar</Button>
-      </div>
-    </form>
-  )
-}
-
-function VariableCostForm({
-  initial,
-  onSubmit,
-  onCancel,
-  loading,
-  companyOptions,
-}: {
-  initial?: VariableCost
-  onSubmit: (dto: CreateVariableCostDto) => void
-  onCancel: () => void
-  loading: boolean
-  companyOptions: { value: string; label: string }[]
-}) {
-  const [name, setName] = useState(initial?.name ?? '')
-  const [amount, setAmount] = useState(String(initial?.amount ?? ''))
-  const [date, setDate] = useState(initial?.date ?? '')
-  const [interestAmount, setInterestAmount] = useState(String(initial?.interest_amount ?? 0))
-  const [category, setCategory] = useState(initial?.category ?? '')
-  const [description, setDescription] = useState(initial?.description ?? '')
-  const [companyId, setCompanyId] = useState(initial?.company_id ?? '')
-
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ name, amount: parseFloat(amount), interest_amount: parseFloat(interestAmount || '0'), date, category: category || undefined, description: description || undefined, company_id: companyId || undefined }) }} className="flex flex-col gap-4">
-      <Input label="Nome *" value={name} onChange={(e) => setName(e.target.value)} required />
-      <Input label="Valor *" type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
-      <Input label="Juros" type="number" min="0" step="0.01" value={interestAmount} onChange={(e) => setInterestAmount(e.target.value)} required />
-      <Input label="Data *" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-      <Input label="Categoria" value={category} onChange={(e) => setCategory(e.target.value)} />
-      <Input label="Descrição" value={description} onChange={(e) => setDescription(e.target.value)} />
-      <Select label="Empresa" options={companyOptions} value={companyId} onChange={(e) => setCompanyId(e.target.value)} />
-      <div className="flex justify-end gap-3">
-        <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" loading={loading}>Salvar</Button>
-      </div>
-    </form>
-  )
-}
-
-function FixedCostInterestForm({
-  initial,
-  referenceYear,
-  referenceMonth,
-  onSubmit,
-  loading,
-}: {
-  initial?: FixedCostInterest
-  referenceYear: number
-  referenceMonth: number
-  onSubmit: (dto: CreateFixedCostInterestDto | UpdateFixedCostInterestDto) => Promise<void>
-  loading: boolean
-}) {
-  const [year, setYear] = useState(String(initial?.reference_year ?? referenceYear))
-  const [month, setMonth] = useState(String(initial?.reference_month ?? referenceMonth))
-  const [interestAmount, setInterestAmount] = useState(String(initial?.interest_amount ?? 0))
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault()
-        void onSubmit({
-          reference_year: parseInt(year),
-          reference_month: parseInt(month),
-          interest_amount: parseFloat(interestAmount),
-        })
-      }}
-      className="flex flex-col gap-4"
-    >
-      <Input label="Competência - Ano *" type="number" min="1900" max="9999" value={year} onChange={(e) => setYear(e.target.value)} required />
-      <Input label="Competência - Mês *" type="number" min="1" max="12" value={month} onChange={(e) => setMonth(e.target.value)} required />
-      <Input label="Valor adicional de juros *" type="number" min="0" step="0.01" value={interestAmount} onChange={(e) => setInterestAmount(e.target.value)} required />
-      <Button type="submit" loading={loading}>Salvar juros</Button>
-    </form>
-  )
-}
-
-function FixedCostRow({
-  fixedCost,
-  referenceYear,
-  referenceMonth,
-  onOpenInterestModal,
-  onEdit,
-  onDelete,
-}: {
-  fixedCost: FixedCost
-  referenceYear: number
-  referenceMonth: number
-  onOpenInterestModal: (cost: FixedCost) => void
-  onEdit: (cost: FixedCost) => void
-  onDelete: (id: string) => void
-}) {
-  const { data: interests } = useFixedCostInterests(fixedCost.id, { reference_year: referenceYear })
-  const selectedInterest = interests?.find((item) => item.reference_month === referenceMonth)
-  const interestAmount = selectedInterest?.interest_amount ?? 0
-  const totalAmount = fixedCost.amount + interestAmount
-
-  return (
-    <tr>
-      <td className="px-6 py-4 text-sm text-gray-900">{fixedCost.name}</td>
-      <td className="px-6 py-4 text-sm text-gray-500">{fixedCost.category ?? '—'}</td>
-      <td className="px-6 py-4 text-sm text-gray-500">dia {fixedCost.due_day}</td>
-      <td className="px-6 py-4 text-right text-sm text-gray-500">{interestAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-      <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">{totalAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-      <td className="px-6 py-4 text-right">
-        <div className="flex justify-end gap-2">
-          <Button size="sm" variant="secondary" onClick={() => onOpenInterestModal(fixedCost)}>Juros</Button>
-          <Button size="sm" variant="secondary" onClick={() => onEdit(fixedCost)}>Editar</Button>
-          <Button size="sm" variant="danger" onClick={() => onDelete(fixedCost.id)}>Excluir</Button>
-        </div>
-      </td>
-    </tr>
-  )
+function formatMonthLabel(month: string) {
+  return new Date(`${month}T00:00:00`).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
 }
 
 export default function FinancialPage() {
@@ -252,8 +77,18 @@ export default function FinancialPage() {
   const [selectedFixedCost, setSelectedFixedCost] = useState<FixedCost | undefined>()
   const [editingInterest, setEditingInterest] = useState<FixedCostInterest | undefined>()
   const [interestError, setInterestError] = useState('')
+  const [activeTab, setActiveTab] = useState<'overview' | 'graphs'>('overview')
+  const [variableCostToDelete, setVariableCostToDelete] = useState<VariableCost | undefined>()
+  const [fixedCostToDelete, setFixedCostToDelete] = useState<FixedCost | undefined>()
+  const [interestToDelete, setInterestToDelete] = useState<FixedCostInterest | undefined>()
 
   const { data: report, isLoading: reportLoading } = useFinancialReport({ date_from: dateFrom, date_to: dateTo, company_id: companyId || undefined })
+  const analytics = useFinancialAnalytics({
+    company_id: companyId || undefined,
+    date_from: dateFrom,
+    date_to: dateTo,
+    horizon_months: 12,
+  })
   const { data: entries } = useFinancialEntries({ date_from: dateFrom, date_to: dateTo, company_id: companyId || undefined, limit: 50, offset: 0 })
   const { data: fixedCosts } = useFixedCosts({ date_from: dateFrom, date_to: dateTo })
   const { data: variableCosts } = useVariableCosts({ date_from: dateFrom, date_to: dateTo })
@@ -282,6 +117,11 @@ export default function FinancialPage() {
     { value: '', label: 'Todas as empresas' },
     ...(companiesData?.companies ?? []).map((c) => ({ value: c.id, label: `${c.name} (${c.type})` })),
   ]
+
+  const analyticsErrorMessage = useMemo(() => {
+    if (!analytics.error) return ''
+    return getApiErrorMessage(analytics.error, 'Erro ao carregar analytics')
+  }, [analytics.error])
 
   const handleFcSubmit = async (dto: CreateFixedCostDto | UpdateFixedCostDto) => {
     if (editingFc) {
@@ -322,183 +162,96 @@ export default function FinancialPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Financeiro</h1>
-        <div className="flex items-center gap-3">
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          <span className="text-gray-400">até</span>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-          <Select options={companyFilterOptions} value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="w-64" />
-        </div>
+      <FinancialFiltersBar
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        companyId={companyId}
+        companyOptions={companyFilterOptions}
+        onDateFromChange={setDateFrom}
+        onDateToChange={setDateTo}
+        onCompanyChange={setCompanyId}
+      />
+
+      <FinancialTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+      <div
+        id="financial-panel-graphs"
+        role="tabpanel"
+        aria-labelledby="financial-tab-graphs"
+        hidden={activeTab !== 'graphs'}
+        className="flex flex-col gap-4"
+      >
+          {!companyId && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700" aria-live="polite">
+              Selecione uma empresa para visualizar os gráficos financeiros.
+            </div>
+          )}
+
+          {companyId && analytics.isLoading && (
+            <div className="py-8 text-center text-gray-500" aria-live="polite">Carregando gráficos…</div>
+          )}
+
+          {companyId && analyticsErrorMessage && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" aria-live="assertive">{analyticsErrorMessage}</div>
+          )}
+
+          {companyId && analytics.data && analytics.data.historical_by_month.length === 0 && (
+            <div className="rounded-lg border border-gray-200 bg-white px-6 py-8 text-center text-gray-500">
+              Sem dados para o período selecionado.
+            </div>
+          )}
+
+          {companyId && analytics.data && analytics.data.historical_by_month.length > 0 && (
+            <FinancialGraphs analytics={analytics.data} formatMonthLabel={formatMonthLabel} />
+          )}
       </div>
 
-      {reportLoading ? (
-        <div className="py-8 text-center text-gray-500">Carregando relatório...</div>
-      ) : report && (
-        <div className="grid grid-cols-3 gap-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-6">
-            <p className="text-xs font-medium uppercase text-gray-500">Receitas</p>
-            <p className="mt-2 text-2xl font-bold text-green-600">{report.total_income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-6">
-            <p className="text-xs font-medium uppercase text-gray-500">Despesas</p>
-            <p className="mt-2 text-2xl font-bold text-red-600">{report.total_expense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-6">
-            <p className="text-xs font-medium uppercase text-gray-500">Saldo</p>
-            <p className={`mt-2 text-2xl font-bold ${report.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {report.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </p>
-          </div>
-        </div>
-      )}
+      <div
+        id="financial-panel-overview"
+        role="tabpanel"
+        aria-labelledby="financial-tab-overview"
+        hidden={activeTab !== 'overview'}
+        className="flex flex-col gap-8"
+      >
+          <FinancialReportSummaryCards report={report} loading={reportLoading} />
+          <FinancialMonthlyTable entries={report?.entries_by_month} />
+          <FinancialEntriesTable entries={entries} />
 
-      {report && report.entries_by_month.length > 1 && (
-        <div className="rounded-lg border border-gray-200 bg-white">
-          <div className="border-b px-6 py-4">
-            <h2 className="font-medium text-gray-900">Por mês</h2>
-          </div>
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Mês</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Receitas</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Despesas</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Saldo</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {report.entries_by_month.map((row) => (
-                <tr key={row.month}>
-                  <td className="px-6 py-4 text-sm text-gray-900">{new Date(row.month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</td>
-                  <td className="px-6 py-4 text-right text-sm text-green-600">{row.income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                  <td className="px-6 py-4 text-right text-sm text-red-600">{row.expense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                  <td className={`px-6 py-4 text-right text-sm font-medium ${row.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>{row.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+          <VariableCostsSection
+            variableCosts={variableCosts}
+            onOpenCreate={() => setVcModalOpen(true)}
+            onEdit={(cost) => {
+              setEditingVc(cost)
+              setVcModalOpen(true)
+            }}
+            onDelete={(id) => {
+              const selectedVariableCost = variableCosts?.find((item) => item.id === id)
+              if (!selectedVariableCost) return
+              setVariableCostToDelete(selectedVariableCost)
+            }}
+          />
 
-      {entries && entries.entries.length > 0 && (
-        <div className="rounded-lg border border-gray-200 bg-white">
-          <div className="border-b px-6 py-4">
-            <h2 className="font-medium text-gray-900">Lançamentos</h2>
-          </div>
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Data</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Tipo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Descrição</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Valor</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {entries.entries.map((e) => (
-                <tr key={e.id}>
-                  <td className="px-6 py-4 text-sm text-gray-900">{new Date(e.date).toLocaleDateString('pt-BR')}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${e.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {e.type === 'income' ? 'Receita' : 'Despesa'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{e.description ?? e.source_type}</td>
-                  <td className={`px-6 py-4 text-right text-sm font-medium ${e.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                    {e.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <div className="rounded-lg border border-gray-200 bg-white">
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <h2 className="font-medium text-gray-900">Custos Variáveis</h2>
-          <Button size="sm" onClick={() => setVcModalOpen(true)}>+ Novo Custo</Button>
-        </div>
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nome</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Categoria</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Data</th>
-              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Valor</th>
-              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Juros</th>
-              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Total</th>
-              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {(variableCosts ?? []).length === 0 && (
-              <tr><td colSpan={7} className="py-6 text-center text-gray-400">Nenhum custo variável no período</td></tr>
-            )}
-            {(variableCosts ?? []).map((vc) => (
-              <tr key={vc.id}>
-                <td className="px-6 py-4 text-sm text-gray-900">{vc.name}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{vc.category ?? '—'}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{new Date(vc.date).toLocaleDateString('pt-BR')}</td>
-                <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">{vc.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">{vc.interest_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">{(vc.amount + vc.interest_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => { setEditingVc(vc); setVcModalOpen(true) }}>Editar</Button>
-                    <Button size="sm" variant="danger" onClick={() => deleteVc.mutateAsync(vc.id)}>Excluir</Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="rounded-lg border border-gray-200 bg-white">
-          <div className="flex items-center justify-between border-b px-6 py-4">
-            <h2 className="font-medium text-gray-900">Custos Fixos</h2>
-            <p className="text-xs text-gray-500">Competência aplicada: {String(competenceMonth).padStart(2, '0')}/{competenceYear}</p>
-            <Button size="sm" onClick={() => setFcModalOpen(true)}>+ Novo Custo Fixo</Button>
-          </div>
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nome</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Categoria</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Dia</th>
-              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Juros competência</th>
-              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Total</th>
-              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {(fixedCosts ?? []).length === 0 && (
-              <tr><td colSpan={6} className="py-6 text-center text-gray-400">Nenhum custo fixo cadastrado</td></tr>
-            )}
-            {(fixedCosts ?? []).map((fc) => (
-              <FixedCostRow
-                key={fc.id}
-                fixedCost={fc}
-                referenceYear={competenceYear}
-                referenceMonth={competenceMonth}
-                onOpenInterestModal={(cost) => {
-                  setSelectedFixedCost(cost)
-                  setEditingInterest(undefined)
-                  setInterestError('')
-                  setFixedCostInterestModalOpen(true)
-                }}
-                onEdit={(cost) => {
-                  setEditingFc(cost)
-                  setFcModalOpen(true)
-                }}
-                onDelete={(id) => { void deleteFc.mutateAsync(id) }}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+          <FixedCostsSection
+            fixedCosts={fixedCosts}
+            competenceYear={competenceYear}
+            competenceMonth={competenceMonth}
+            onOpenCreate={() => setFcModalOpen(true)}
+            onOpenInterestModal={(cost) => {
+              setSelectedFixedCost(cost)
+              setEditingInterest(undefined)
+              setInterestError('')
+              setFixedCostInterestModalOpen(true)
+            }}
+            onEdit={(cost) => {
+              setEditingFc(cost)
+              setFcModalOpen(true)
+            }}
+            onDelete={(id) => {
+              const selectedFixedCostToDelete = fixedCosts?.find((item) => item.id === id)
+              if (!selectedFixedCostToDelete) return
+              setFixedCostToDelete(selectedFixedCostToDelete)
+            }}
+          />
 
       <Modal
         open={fcModalOpen}
@@ -540,7 +293,7 @@ export default function FinancialPage() {
       >
         {selectedFixedCost && (
           <div className="flex flex-col gap-4">
-            {interestError && <p className="text-sm text-red-600">{interestError}</p>}
+            {interestError && <p className="text-sm text-red-600" aria-live="assertive">{interestError}</p>}
             <FixedCostInterestForm
               initial={editingInterest}
               referenceYear={competenceYear}
@@ -548,52 +301,64 @@ export default function FinancialPage() {
               onSubmit={handleFixedCostInterestSubmit}
               loading={createFixedCostInterest.isPending || updateFixedCostInterest.isPending}
             />
-            <div className="rounded border border-gray-200">
-              <div className="border-b px-4 py-2 text-sm font-medium text-gray-700">Juros cadastrados ({competenceYear})</div>
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Competência</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium uppercase text-gray-500">Juros</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium uppercase text-gray-500">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {(selectedFixedCostInterests ?? []).length === 0 && (
-                    <tr>
-                      <td colSpan={3} className="px-4 py-4 text-center text-sm text-gray-400">Nenhum juros cadastrado para o ano selecionado</td>
-                    </tr>
-                  )}
-                  {(selectedFixedCostInterests ?? []).map((interest) => (
-                    <tr key={interest.id}>
-                      <td className="px-4 py-2 text-sm text-gray-700">{String(interest.reference_month).padStart(2, '0')}/{interest.reference_year}</td>
-                      <td className="px-4 py-2 text-right text-sm text-gray-700">{interest.interest_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                      <td className="px-4 py-2 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="secondary" onClick={() => setEditingInterest(interest)}>Editar</Button>
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            onClick={async () => {
-                              try {
-                                await deleteFixedCostInterest.mutateAsync({ fixedCostId: selectedFixedCost.id, interestId: interest.id })
-                              } catch (error: unknown) {
-                                setInterestError(getApiErrorMessage(error, 'Erro ao remover juros'))
-                              }
-                            }}
-                          >
-                            Remover
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <FixedCostInterestSection
+              competenceYear={competenceYear}
+              interests={selectedFixedCostInterests}
+              onEdit={setEditingInterest}
+              onDelete={async (interest) => {
+                setInterestToDelete(interest)
+              }}
+            />
           </div>
         )}
       </Modal>
+      </div>
+
+      <ConfirmDialog
+        open={Boolean(variableCostToDelete)}
+        title="Excluir custo variável"
+        description={variableCostToDelete ? `Tem certeza que deseja excluir "${variableCostToDelete.name}"?` : undefined}
+        confirmLabel="Excluir"
+        onCancel={() => setVariableCostToDelete(undefined)}
+        onConfirm={() => {
+          if (!variableCostToDelete) return
+          void deleteVc.mutateAsync(variableCostToDelete.id)
+          setVariableCostToDelete(undefined)
+        }}
+        loading={deleteVc.isPending}
+      />
+
+      <ConfirmDialog
+        open={Boolean(fixedCostToDelete)}
+        title="Excluir custo fixo"
+        description={fixedCostToDelete ? `Tem certeza que deseja excluir "${fixedCostToDelete.name}"?` : undefined}
+        confirmLabel="Excluir"
+        onCancel={() => setFixedCostToDelete(undefined)}
+        onConfirm={() => {
+          if (!fixedCostToDelete) return
+          void deleteFc.mutateAsync(fixedCostToDelete.id)
+          setFixedCostToDelete(undefined)
+        }}
+        loading={deleteFc.isPending}
+      />
+
+      <ConfirmDialog
+        open={Boolean(interestToDelete)}
+        title="Remover juros"
+        description={interestToDelete ? `Tem certeza que deseja remover os juros de ${String(interestToDelete.reference_month).padStart(2, '0')}/${interestToDelete.reference_year}?` : undefined}
+        confirmLabel="Remover"
+        onCancel={() => setInterestToDelete(undefined)}
+        onConfirm={async () => {
+          if (!selectedFixedCost || !interestToDelete) return
+          try {
+            await deleteFixedCostInterest.mutateAsync({ fixedCostId: selectedFixedCost.id, interestId: interestToDelete.id })
+            setInterestToDelete(undefined)
+          } catch (error: unknown) {
+            setInterestError(getApiErrorMessage(error, 'Erro ao remover juros'))
+          }
+        }}
+        loading={deleteFixedCostInterest.isPending}
+      />
     </div>
   )
 }

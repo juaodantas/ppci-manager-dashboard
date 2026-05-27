@@ -1,4 +1,4 @@
-import type { FinancialEntry, FinancialReport } from '@manager/domain'
+import type { FinancialAnalytics, FinancialEntry, FinancialReport } from '@manager/domain'
 import type { IFinancialRepository } from '../../../domain/repositories/financial.repository'
 
 export class GetFinancialEntriesUseCase {
@@ -19,5 +19,17 @@ export class GetFinancialReportUseCase {
   constructor(private readonly repo: IFinancialRepository) {}
   execute(params: { date_from: string; date_to: string; company_id?: string }): Promise<FinancialReport> {
     return this.repo.getReport(params)
+  }
+}
+
+export class GetFinancialAnalyticsUseCase {
+  constructor(private readonly repo: IFinancialRepository) {}
+  execute(params: {
+    company_id: string
+    date_from: string
+    date_to: string
+    horizon_months?: number
+  }): Promise<FinancialAnalytics> {
+    return this.repo.getAnalytics(params)
   }
 }
