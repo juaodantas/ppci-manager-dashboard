@@ -58,7 +58,8 @@ financial.get('/analytics', async (c) => {
     }
 
     const payload = (c.get('jwtPayload') ?? {}) as { company_id?: string; company_ids?: string[] }
-    if (!isCompanyInScope(payload, queryParse.data.company_id)) {
+    // Sem company_id, este endpoint entrega analytics global por decisão de produto desta feature.
+    if (queryParse.data.company_id && !isCompanyInScope(payload, queryParse.data.company_id)) {
       throw forbidden('company_id is outside your scope')
     }
 

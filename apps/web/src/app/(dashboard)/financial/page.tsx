@@ -181,27 +181,21 @@ export default function FinancialPage() {
         hidden={activeTab !== 'graphs'}
         className="flex flex-col gap-4"
       >
-          {!companyId && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700" aria-live="polite">
-              Selecione uma empresa para visualizar os gráficos financeiros.
-            </div>
-          )}
-
-          {companyId && analytics.isLoading && (
+          {analytics.isLoading && (
             <div className="py-8 text-center text-gray-500" aria-live="polite">Carregando gráficos…</div>
           )}
 
-          {companyId && analyticsErrorMessage && (
+          {analyticsErrorMessage && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" aria-live="assertive">{analyticsErrorMessage}</div>
           )}
 
-          {companyId && analytics.data && analytics.data.historical_by_month.length === 0 && (
+          {analytics.data && analytics.data.historical_by_month.length === 0 && (
             <div className="rounded-lg border border-gray-200 bg-white px-6 py-8 text-center text-gray-500">
               Sem dados para o período selecionado.
             </div>
           )}
 
-          {companyId && analytics.data && analytics.data.historical_by_month.length > 0 && (
+          {analytics.data && analytics.data.historical_by_month.length > 0 && (
             <FinancialGraphs analytics={analytics.data} formatMonthLabel={formatMonthLabel} />
           )}
       </div>

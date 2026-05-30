@@ -25,7 +25,7 @@ export class GetFinancialReportUseCase {
 export class GetFinancialAnalyticsUseCase {
   constructor(private readonly repo: IFinancialRepository) {}
   execute(params: {
-    company_id: string
+    company_id?: string
     date_from: string
     date_to: string
     horizon_months?: number

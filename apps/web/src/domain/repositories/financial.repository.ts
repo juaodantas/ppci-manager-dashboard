@@ -11,7 +11,7 @@ export interface IFinancialRepository {
   }): Promise<{ entries: FinancialEntry[]; total: number }>
   getReport(params: { date_from: string; date_to: string; company_id?: string }): Promise<FinancialReport>
   getAnalytics(params: {
-    company_id: string
+    company_id?: string
     date_from: string
     date_to: string
     horizon_months?: number

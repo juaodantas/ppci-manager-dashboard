@@ -268,7 +268,7 @@ export const FinancialRepository = {
   },
 
   async getAnalytics(params: {
-    company_id: string
+    company_id?: string
     date_from: string
     date_to: string
     horizon_months: number
@@ -286,7 +286,7 @@ export const FinancialRepository = {
           JOIN payments p ON p.id = fe.source_id AND fe.source_type = 'payment'
           JOIN projects pr ON pr.id = p.project_id
           WHERE fe.type = 'income'
-            AND pr.company_id = ${company_id}::uuid
+            AND (${company_id ?? null}::uuid IS NULL OR pr.company_id = ${company_id ?? null}::uuid)
             AND fe.date BETWEEN ${date_from}::date AND ${date_to}::date
           GROUP BY date_trunc('month', fe.date)
         ),
@@ -310,7 +310,7 @@ export const FinancialRepository = {
           WHERE fc.active = true
             AND fc.start_date <= ${date_to}::date
             AND COALESCE(fc.end_date, ${date_to}::date) >= ${date_from}::date
-            AND fc.company_id = ${company_id}::uuid
+            AND (${company_id ?? null}::uuid IS NULL OR fc.company_id = ${company_id ?? null}::uuid)
           GROUP BY date_trunc('month', LEAST(
             make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
             (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
@@ -321,7 +321,7 @@ export const FinancialRepository = {
             date_trunc('month', vc.date)::date::text AS month,
             COALESCE(SUM(vc.amount + COALESCE(vc.interest_amount, 0)), 0)::float AS variable_expense
           FROM variable_costs vc
-          WHERE vc.company_id = ${company_id}::uuid
+          WHERE (${company_id ?? null}::uuid IS NULL OR vc.company_id = ${company_id ?? null}::uuid)
             AND vc.date BETWEEN ${date_from}::date AND ${date_to}::date
           GROUP BY date_trunc('month', vc.date)
         )
@@ -344,7 +344,7 @@ export const FinancialRepository = {
           COALESCE(SUM(p.amount), 0)::float AS pending_income
         FROM payments p
         JOIN projects pr ON pr.id = p.project_id
-        WHERE pr.company_id = ${company_id}::uuid
+        WHERE (${company_id ?? null}::uuid IS NULL OR pr.company_id = ${company_id ?? null}::uuid)
           AND p.status = 'pending'
           AND p.due_date IS NOT NULL
           AND p.due_date >= date_trunc('month', ${date_to}::date + interval '1 month')::date
@@ -369,7 +369,7 @@ export const FinancialRepository = {
           AND fci.reference_year = EXTRACT(year FROM gs)::int
           AND fci.reference_month = EXTRACT(month FROM gs)::int
         WHERE fc.active = true
-          AND fc.company_id = ${company_id}::uuid
+          AND (${company_id ?? null}::uuid IS NULL OR fc.company_id = ${company_id ?? null}::uuid)
           AND fc.start_date <= (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
           AND COALESCE(fc.end_date, (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date) >= date_trunc('month', gs)::date
         GROUP BY date_trunc('month', LEAST(

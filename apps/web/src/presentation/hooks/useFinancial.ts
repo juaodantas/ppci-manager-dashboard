@@ -3,6 +3,31 @@
 import { useQuery } from '@tanstack/react-query'
 import { container } from '../../infrastructure/di/container'
 
+type FinancialAnalyticsParams = {
+  company_id?: string
+  date_from: string
+  date_to: string
+  horizon_months?: number
+}
+
+export function buildFinancialAnalyticsParams(params: FinancialAnalyticsParams): FinancialAnalyticsParams {
+  return {
+    ...(params.company_id ? { company_id: params.company_id } : {}),
+    date_from: params.date_from,
+    date_to: params.date_to,
+    horizon_months: params.horizon_months,
+  }
+}
+
+export function buildFinancialAnalyticsQueryKey(params: FinancialAnalyticsParams) {
+  return [
+    'financial',
+    'analytics',
+    params.company_id ? { scope: 'company', company_id: params.company_id } : { scope: 'all' },
+    { date_from: params.date_from, date_to: params.date_to, horizon_months: params.horizon_months },
+  ] as const
+}
+
 export function useFinancialEntries(params?: {
   type?: string
   date_from?: string
@@ -40,19 +65,8 @@ export function useFinancialAnalytics(params: {
   horizon_months?: number
 }) {
   return useQuery({
-    queryKey: ['financial', 'analytics', params],
-    queryFn: () => {
-      if (!params.company_id) {
-        throw new Error('company_id is required')
-      }
-
-      return container.financial.analytics.execute({
-        company_id: params.company_id,
-        date_from: params.date_from,
-        date_to: params.date_to,
-        horizon_months: params.horizon_months,
-      })
-    },
-    enabled: !!params.company_id && !!params.date_from && !!params.date_to,
+    queryKey: buildFinancialAnalyticsQueryKey(params),
+    queryFn: () => container.financial.analytics.execute(buildFinancialAnalyticsParams(params)),
+    enabled: !!params.date_from && !!params.date_to,
   })
 }

@@ -7,6 +7,10 @@ import {
 } from '../../../../supabase/functions/api/repositories/financial-analytics.logic'
 import { isCompanyInScope } from '../../../../supabase/functions/api/routes/financial-analytics.auth'
 import { resolveHorizonMonths } from '../../../../supabase/functions/api/routes/financial-analytics.query'
+import {
+  buildFinancialAnalyticsParams,
+  buildFinancialAnalyticsQueryKey,
+} from '../presentation/hooks/useFinancial'
 
 describe('financial analytics rules', () => {
   it('returns null for M/M when previous is zero', () => {
@@ -57,5 +61,49 @@ describe('financial analytics rules', () => {
     expect(isCompanyInScope({ company_ids: ['a', 'b'] }, 'c')).toBe(false)
     expect(isCompanyInScope({ company_ids: ['a', 'b'] }, 'a')).toBe(true)
     expect(isCompanyInScope({}, 'any')).toBe(true)
+  })
+
+  it('omits company_id for aggregate analytics params', () => {
+    expect(buildFinancialAnalyticsParams({
+      company_id: '',
+      date_from: '2026-01-01',
+      date_to: '2026-01-31',
+      horizon_months: 12,
+    })).toEqual({
+      date_from: '2026-01-01',
+      date_to: '2026-01-31',
+      horizon_months: 12,
+    })
+  })
+
+  it('preserves company_id for company-specific analytics params', () => {
+    expect(buildFinancialAnalyticsParams({
+      company_id: 'company-1',
+      date_from: '2026-01-01',
+      date_to: '2026-01-31',
+    })).toEqual({
+      company_id: 'company-1',
+      date_from: '2026-01-01',
+      date_to: '2026-01-31',
+      horizon_months: undefined,
+    })
+  })
+
+  it('uses different query keys for aggregate and company-specific analytics', () => {
+    const aggregateKey = buildFinancialAnalyticsQueryKey({
+      date_from: '2026-01-01',
+      date_to: '2026-01-31',
+      horizon_months: 12,
+    })
+    const companyKey = buildFinancialAnalyticsQueryKey({
+      company_id: 'company-1',
+      date_from: '2026-01-01',
+      date_to: '2026-01-31',
+      horizon_months: 12,
+    })
+
+    expect(aggregateKey).not.toEqual(companyKey)
+    expect(aggregateKey[2]).toEqual({ scope: 'all' })
+    expect(companyKey[2]).toEqual({ scope: 'company', company_id: 'company-1' })
   })
 })

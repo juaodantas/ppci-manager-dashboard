@@ -26,7 +26,7 @@ export class FinancialHttpRepository implements IFinancialRepository {
   }
 
   async getAnalytics(params: {
-    company_id: string
+    company_id?: string
     date_from: string
     date_to: string
     horizon_months?: number

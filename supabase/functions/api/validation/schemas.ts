@@ -243,7 +243,7 @@ export const fixedCostInterestListQuerySchema = z.object({
 })
 
 export const financialAnalyticsQuerySchema = z.object({
-  company_id: z.string().uuid(),
+  company_id: z.string().uuid().optional(),
   date_from: z.string().date(),
   date_to: z.string().date(),
   horizon_months: z.coerce.number().int().min(1).max(12).default(12),
