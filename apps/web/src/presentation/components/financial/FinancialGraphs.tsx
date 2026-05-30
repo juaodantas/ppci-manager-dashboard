@@ -51,9 +51,9 @@ type ForecastPoint = {
 }
 
 const chartTitles: Record<ChartCard, string> = {
-  historical: 'Histórico mensal e M/M',
-  expense: 'Composição de despesas',
-  forecast: 'Projeção (12 meses)',
+  historical: 'Receitas, despesas e saldo mês a mês',
+  expense: 'Como as despesas se dividem',
+  forecast: 'Estimativa para os próximos 12 meses',
 }
 
 export function FinancialGraphs({ analytics, formatMonthLabel }: FinancialGraphsProps) {
@@ -94,7 +94,7 @@ export function FinancialGraphs({ analytics, formatMonthLabel }: FinancialGraphs
   )
 
   return (
-    <section className="flex flex-col gap-4" aria-label="Análises gráficas financeiras">
+    <section className="flex flex-col gap-4" aria-label="Gráficos financeiros explicados em linguagem simples">
       <FinancialGraphsCarousel
         activeIndex={activeIndex}
         total={chartCards.length}
@@ -106,7 +106,7 @@ export function FinancialGraphs({ analytics, formatMonthLabel }: FinancialGraphs
 
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex flex-col gap-2">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Resumo do gráfico</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Resumo em linguagem simples</h3>
           <FinancialGraphsInsights
             activeChart={activeChart}
             historicalData={historicalData}
@@ -116,7 +116,7 @@ export function FinancialGraphs({ analytics, formatMonthLabel }: FinancialGraphs
         </div>
 
         {activeChart === 'historical' && (
-          <div className="h-80" role="region" aria-label="Histórico mensal com variação mês a mês">
+          <div className="h-80" role="region" aria-label="Comparação mensal de receitas, despesas, saldo e variação mês a mês">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={historicalData} margin={{ top: 16, right: 24, left: 8, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -130,19 +130,19 @@ export function FinancialGraphs({ analytics, formatMonthLabel }: FinancialGraphs
                 />
                 <Tooltip content={<HistoricalTooltip />} />
                 <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="income" stroke="#16a34a" strokeWidth={2} name="Receita" />
-                <Line yAxisId="left" type="monotone" dataKey="expense" stroke="#dc2626" strokeWidth={2} name="Despesa" />
-                <Line yAxisId="left" type="monotone" dataKey="balance" stroke="#2563eb" strokeWidth={2} name="Saldo" />
-                <Line yAxisId="right" type="monotone" dataKey="momIncome" stroke="#16a34a" strokeDasharray="4 4" name="M/M Receita (%)" />
-                <Line yAxisId="right" type="monotone" dataKey="momExpense" stroke="#dc2626" strokeDasharray="4 4" name="M/M Despesa (%)" />
-                <Line yAxisId="right" type="monotone" dataKey="momBalance" stroke="#2563eb" strokeDasharray="4 4" name="M/M Saldo (%)" />
+                <Line yAxisId="left" type="monotone" dataKey="income" stroke="#16a34a" strokeWidth={2} name="Receitas do mês" />
+                <Line yAxisId="left" type="monotone" dataKey="expense" stroke="#dc2626" strokeWidth={2} name="Despesas do mês" />
+                <Line yAxisId="left" type="monotone" dataKey="balance" stroke="#2563eb" strokeWidth={2} name="Saldo do mês" />
+                <Line yAxisId="right" type="monotone" dataKey="momIncome" stroke="#16a34a" strokeDasharray="4 4" name="Variação mês a mês da receita (%)" />
+                <Line yAxisId="right" type="monotone" dataKey="momExpense" stroke="#dc2626" strokeDasharray="4 4" name="Variação mês a mês da despesa (%)" />
+                <Line yAxisId="right" type="monotone" dataKey="momBalance" stroke="#2563eb" strokeDasharray="4 4" name="Variação mês a mês do saldo (%)" />
               </LineChart>
             </ResponsiveContainer>
           </div>
         )}
 
         {activeChart === 'expense' && (
-          <div className="h-80" role="region" aria-label="Composição de despesas fixas e variáveis">
+          <div className="h-80" role="region" aria-label="Comparação entre despesas fixas recorrentes e despesas variáveis do mês">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={expenseData} margin={{ top: 16, right: 24, left: 8, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -150,15 +150,15 @@ export function FinancialGraphs({ analytics, formatMonthLabel }: FinancialGraphs
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip content={<ExpenseTooltip />} />
                 <Legend />
-                <Bar dataKey="fixed" stackId="expense" fill="#f97316" name="Fixo" />
-                <Bar dataKey="variable" stackId="expense" fill="#0ea5e9" name="Variável" />
+                <Bar dataKey="fixed" stackId="expense" fill="#f97316" name="Despesas fixas" />
+                <Bar dataKey="variable" stackId="expense" fill="#0ea5e9" name="Despesas variáveis" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         )}
 
         {activeChart === 'forecast' && (
-          <div className="h-80" role="region" aria-label="Projeção de receitas, despesas e saldo para 12 meses">
+          <div className="h-80" role="region" aria-label="Estimativa de receitas, despesas e saldo para os próximos 12 meses">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={forecastData} margin={{ top: 16, right: 24, left: 8, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -166,9 +166,9 @@ export function FinancialGraphs({ analytics, formatMonthLabel }: FinancialGraphs
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip content={<ForecastTooltip />} />
                 <Legend />
-                <Line type="monotone" dataKey="income" stroke="#16a34a" strokeWidth={2} name="Receita prevista" />
-                <Line type="monotone" dataKey="expense" stroke="#dc2626" strokeWidth={2} name="Despesa prevista" />
-                <Line type="monotone" dataKey="balance" stroke="#2563eb" strokeWidth={2} name="Saldo previsto" dot={ForecastDot} />
+                <Line type="monotone" dataKey="income" stroke="#16a34a" strokeWidth={2} name="Receitas estimadas" />
+                <Line type="monotone" dataKey="expense" stroke="#dc2626" strokeWidth={2} name="Despesas estimadas" />
+                <Line type="monotone" dataKey="balance" stroke="#2563eb" strokeWidth={2} name="Saldo estimado" dot={ForecastDot} />
               </LineChart>
             </ResponsiveContainer>
           </div>

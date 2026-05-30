@@ -88,12 +88,12 @@ export function HistoricalTooltip({ active, payload, label }: TooltipProps<numbe
 
   return (
     <TooltipContainer label={label}>
-      <p>Receita: {currencyFormatter.format(raw.income)}</p>
-      <p>Despesa: {currencyFormatter.format(raw.expense)}</p>
-      <p>Saldo: {currencyFormatter.format(raw.balance)}</p>
-      <p>M/M Receita: {formatPercent(raw.momIncome)}</p>
-      <p>M/M Despesa: {formatPercent(raw.momExpense)}</p>
-      <p>M/M Saldo: {formatPercent(raw.momBalance)}</p>
+      <p>Receitas do mês: {currencyFormatter.format(raw.income)}</p>
+      <p>Despesas do mês: {currencyFormatter.format(raw.expense)}</p>
+      <p>Saldo do mês: {currencyFormatter.format(raw.balance)}</p>
+      <p>Variação mês a mês da receita: {formatPercent(raw.momIncome)}</p>
+      <p>Variação mês a mês da despesa: {formatPercent(raw.momExpense)}</p>
+      <p>Variação mês a mês do saldo: {formatPercent(raw.momBalance)}</p>
     </TooltipContainer>
   )
 }
@@ -105,8 +105,8 @@ export function ExpenseTooltip({ active, payload, label }: TooltipProps<number, 
 
   return (
     <TooltipContainer label={label}>
-      <p>Fixo: {currencyFormatter.format(raw.fixed)}</p>
-      <p>Variável: {currencyFormatter.format(raw.variable)}</p>
+      <p>Despesas fixas recorrentes: {currencyFormatter.format(raw.fixed)}</p>
+      <p>Despesas variáveis do mês: {currencyFormatter.format(raw.variable)}</p>
     </TooltipContainer>
   )
 }
@@ -115,13 +115,18 @@ export function ForecastTooltip({ active, payload, label }: TooltipProps<number,
   if (!active || !payload || payload.length === 0) return null
   const raw: unknown = payload[0]?.payload
   if (!isForecastPoint(raw)) return null
+  const balanceStatus = raw.balance < 0
+    ? 'Saldo estimado abaixo de zero; vale planejar caixa.'
+    : raw.balance === 0
+      ? 'Saldo estimado zerado; acompanhe para evitar queda.'
+      : 'Saldo estimado positivo.'
 
   return (
     <TooltipContainer label={label}>
-      <p>Receita: {currencyFormatter.format(raw.income)}</p>
-      <p>Despesa: {currencyFormatter.format(raw.expense)}</p>
-      <p>Saldo: {currencyFormatter.format(raw.balance)}</p>
-      <p className={raw.isNegative ? 'text-red-600' : 'text-gray-700'}>{raw.isNegative ? 'Saldo negativo' : 'Saldo positivo'}</p>
+      <p>Receitas estimadas: {currencyFormatter.format(raw.income)}</p>
+      <p>Despesas estimadas: {currencyFormatter.format(raw.expense)}</p>
+      <p>Saldo estimado: {currencyFormatter.format(raw.balance)}</p>
+      <p className={raw.balance < 0 ? 'text-red-600' : 'text-gray-700'}>{balanceStatus}</p>
     </TooltipContainer>
   )
 }
