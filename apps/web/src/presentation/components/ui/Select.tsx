@@ -26,7 +26,7 @@ export function Select({ label, error, description, options, placeholder, classN
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <label htmlFor={selectId} className="text-sm font-medium text-slate-700">
+        <label htmlFor={selectId} className="text-sm font-medium text-slate-700 dark:text-slate-200">
           {label}
         </label>
       )}
@@ -34,7 +34,7 @@ export function Select({ label, error, description, options, placeholder, classN
         id={selectId}
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={describedBy}
-        className={`rounded-md border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-slate-50 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 ${error ? 'border-red-500' : 'border-slate-300'} ${className}`}
+        className={`rounded-md border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-slate-50 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-offset-slate-950 dark:disabled:bg-slate-800 dark:disabled:text-slate-500 ${error ? 'border-red-500 dark:border-red-400' : 'border-slate-300 dark:border-slate-700'} ${className}`}
         {...props}
       >
         {placeholder && <option value="">{placeholder}</option>}
@@ -45,12 +45,12 @@ export function Select({ label, error, description, options, placeholder, classN
         ))}
       </select>
       {description && (
-        <p id={descriptionId} className="text-xs text-slate-500">
+          <p id={descriptionId} className="text-xs text-slate-500 dark:text-slate-400">
           {description}
         </p>
       )}
       {error && (
-        <p id={errorId} className="text-xs text-red-600" role="alert">
+        <p id={errorId} className="text-xs text-red-600 dark:text-red-300" role="alert">
           {error}
         </p>
       )}

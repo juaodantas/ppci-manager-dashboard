@@ -12,9 +12,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<NonNullable<ButtonProps['variant']>, string> = {
   primary: 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400',
-  secondary: 'bg-slate-200 text-slate-800 hover:bg-slate-300 disabled:bg-slate-100',
+  secondary: 'bg-slate-200 text-slate-800 hover:bg-slate-300 disabled:bg-slate-100 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 dark:disabled:bg-slate-800',
   danger: 'bg-red-600 text-white hover:bg-red-700 disabled:bg-red-400',
-  ghost: 'bg-transparent text-slate-700 hover:bg-slate-100 disabled:text-slate-400',
+  ghost: 'bg-transparent text-slate-700 hover:bg-slate-100 disabled:text-slate-400 dark:text-slate-200 dark:hover:bg-slate-800 dark:disabled:text-slate-500',
 }
 
 const sizeClasses: Record<NonNullable<ButtonProps['size']>, string> = {
@@ -43,7 +43,7 @@ export function Button({
       disabled={isDisabled}
       aria-busy={loading || undefined}
       aria-live={loading ? 'polite' : undefined}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-transparent font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-80 motion-safe:transition-colors ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-transparent font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-80 motion-safe:transition-colors dark:focus-visible:ring-offset-slate-950 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...props}
     >
       {icon && !loading && <span className="text-base" aria-hidden="true">{icon}</span>}

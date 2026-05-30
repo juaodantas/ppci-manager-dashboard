@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { useAuth } from '../../contexts/auth.context'
 import { Button } from '../ui/Button'
+import { ThemeToggle } from './ThemeToggle'
 
 const navItems = [
   { href: '/', label: 'Dashboard' },
@@ -23,10 +24,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-950">
       <a
         href="#main-content"
-        className="sr-only z-50 rounded-md bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        className="sr-only z-50 rounded-md bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-blue-300 dark:focus-visible:ring-offset-slate-950"
       >
         Ir para o conteúdo principal
       </a>
@@ -39,17 +40,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           onClick={() => setIsSidebarOpen(false)}
         />
         <aside
-          className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-gray-200 bg-white shadow-sm transition-transform duration-200 ease-out sm:static sm:translate-x-0 sm:shadow-none ${
+          className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-gray-200 bg-white shadow-sm transition-transform duration-200 ease-out dark:border-slate-800 dark:bg-slate-900 sm:static sm:translate-x-0 sm:shadow-none ${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
           aria-label="Navegação principal"
         >
-          <div className="flex h-16 items-center justify-between border-b border-gray-200 px-6">
-            <span className="text-lg font-bold text-gray-900">PPCI Manager</span>
+          <div className="flex h-16 items-center justify-between border-b border-gray-200 px-6 dark:border-slate-800">
+            <span className="text-lg font-bold text-gray-900 dark:text-slate-100">PPCI Manager</span>
             <button
               type="button"
               onClick={() => setIsSidebarOpen(false)}
-              className="rounded-md p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:hidden"
+              className="rounded-md p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:focus-visible:ring-offset-slate-900 sm:hidden"
             >
               <span className="sr-only">Fechar menu</span>
               <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -69,10 +70,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   onClick={() => setIsSidebarOpen(false)}
-                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-200'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50'
                   }`}
                 >
                   {item.label}
@@ -80,18 +81,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               )
             })}
           </nav>
-          <div className="border-t border-gray-200 p-4">
+          <div className="flex flex-col gap-3 border-t border-gray-200 p-4 dark:border-slate-800 sm:hidden">
             <Button variant="ghost" size="sm" onClick={logout} className="w-full justify-start">
               Sair
             </Button>
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-16 items-center gap-3 border-b border-gray-200 bg-white px-4 sm:hidden">
+          <header className="flex h-16 items-center gap-3 border-b border-gray-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 sm:px-8">
             <button
               type="button"
               onClick={() => setIsSidebarOpen(true)}
-              className="rounded-md p-2 text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              className="rounded-md p-2 text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50 dark:focus-visible:ring-offset-slate-900 sm:hidden"
             >
               <span className="sr-only">Abrir menu</span>
               <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -102,7 +103,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 />
               </svg>
             </button>
-            <span className="text-sm font-semibold text-gray-900">PPCI Manager</span>
+            <span className="text-sm font-semibold text-gray-900 dark:text-slate-100 sm:sr-only">PPCI Manager</span>
+            <div className="ml-auto flex items-center gap-2">
+              <ThemeToggle variant="compact" className="min-h-10 px-3 py-1.5" />
+              <Button variant="ghost" size="sm" onClick={logout} className="hidden min-h-10 sm:inline-flex">
+                Sair
+              </Button>
+            </div>
           </header>
           <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto p-6 sm:p-8">
             {children}

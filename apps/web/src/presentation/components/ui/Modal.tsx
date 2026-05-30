@@ -135,10 +135,10 @@ export function Modal({ open, title, onClose, children, footer, description, des
         aria-labelledby={titleId}
         aria-describedby={resolvedDescriptionId}
         tabIndex={-1}
-        className="relative z-10 w-full max-w-lg rounded-xl border border-slate-200 bg-white shadow-2xl outline-none"
+        className="relative z-10 w-full max-w-lg rounded-xl border border-slate-200 bg-white shadow-2xl outline-none dark:border-slate-700 dark:bg-slate-900"
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-          <h2 id={titleId} className="text-lg font-semibold text-slate-900">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-700">
+          <h2 id={titleId} className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {title}
           </h2>
           <Button variant="ghost" size="sm" onClick={onClose} aria-label="Fechar modal">
@@ -146,12 +146,12 @@ export function Modal({ open, title, onClose, children, footer, description, des
           </Button>
         </div>
         {description && (
-          <p id={resolvedDescriptionId} className="px-6 pt-4 text-sm text-slate-600">
+          <p id={resolvedDescriptionId} className="px-6 pt-4 text-sm text-slate-600 dark:text-slate-300">
             {description}
           </p>
         )}
         <div className="px-6 py-4">{children}</div>
-        {footer && <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">{footer}</div>}
+        {footer && <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4 dark:border-slate-700">{footer}</div>}
       </div>
     </div>
   )

@@ -49,7 +49,7 @@ export function ConfirmDialog({
       }
     >
       {description ? null : (
-        <p id={fallbackDescriptionId} className="text-sm text-slate-600">
+        <p id={fallbackDescriptionId} className="text-sm text-slate-600 dark:text-slate-300">
           Esta ação não pode ser desfeita.
         </p>
       )}

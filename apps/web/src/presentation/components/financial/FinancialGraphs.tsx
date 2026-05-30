@@ -17,6 +17,7 @@ import type { FinancialAnalytics } from '@manager/domain'
 import { FinancialGraphsCarousel } from './FinancialGraphsCarousel'
 import { FinancialGraphsInsights } from './FinancialGraphsInsights'
 import { HistoricalTooltip, ExpenseTooltip, ForecastTooltip, ForecastDot } from './FinancialGraphsTooltip'
+import { useTheme } from '../../contexts/theme.context'
 
 type FinancialGraphsProps = {
   analytics: FinancialAnalytics
@@ -58,7 +59,10 @@ const chartTitles: Record<ChartCard, string> = {
 
 export function FinancialGraphs({ analytics, formatMonthLabel }: FinancialGraphsProps) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const { theme } = useTheme()
   const activeChart = chartCards[activeIndex]
+  const axisColor = theme === 'dark' ? '#cbd5e1' : '#475569'
+  const gridColor = theme === 'dark' ? '#334155' : '#e2e8f0'
 
   const historicalData = useMemo<HistoricalPoint[]>(
     () => analytics.historical_by_month.map((row) => ({
@@ -104,9 +108,9 @@ export function FinancialGraphs({ analytics, formatMonthLabel }: FinancialGraphs
         onSelect={setActiveIndex}
       />
 
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-4 flex flex-col gap-2">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Resumo em linguagem simples</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">Resumo em linguagem simples</h3>
           <FinancialGraphsInsights
             activeChart={activeChart}
             historicalData={historicalData}
@@ -119,13 +123,14 @@ export function FinancialGraphs({ analytics, formatMonthLabel }: FinancialGraphs
           <div className="h-80" role="region" aria-label="Comparação mensal de receitas, despesas, saldo e variação mês a mês">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={historicalData} margin={{ top: 16, right: 24, left: 8, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: axisColor }} stroke={axisColor} />
+                <YAxis yAxisId="left" tick={{ fontSize: 12, fill: axisColor }} stroke={axisColor} />
                 <YAxis
                   yAxisId="right"
                   orientation="right"
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: axisColor }}
+                  stroke={axisColor}
                   tickFormatter={(value: number) => `${value.toFixed(0)}%`}
                 />
                 <Tooltip content={<HistoricalTooltip />} />
@@ -145,9 +150,9 @@ export function FinancialGraphs({ analytics, formatMonthLabel }: FinancialGraphs
           <div className="h-80" role="region" aria-label="Comparação entre despesas fixas recorrentes e despesas variáveis do mês">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={expenseData} margin={{ top: 16, right: 24, left: 8, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: axisColor }} stroke={axisColor} />
+                <YAxis tick={{ fontSize: 12, fill: axisColor }} stroke={axisColor} />
                 <Tooltip content={<ExpenseTooltip />} />
                 <Legend />
                 <Bar dataKey="fixed" stackId="expense" fill="#f97316" name="Despesas fixas" />
@@ -161,9 +166,9 @@ export function FinancialGraphs({ analytics, formatMonthLabel }: FinancialGraphs
           <div className="h-80" role="region" aria-label="Estimativa de receitas, despesas e saldo para os próximos 12 meses">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={forecastData} margin={{ top: 16, right: 24, left: 8, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: axisColor }} stroke={axisColor} />
+                <YAxis tick={{ fontSize: 12, fill: axisColor }} stroke={axisColor} />
                 <Tooltip content={<ForecastTooltip />} />
                 <Legend />
                 <Line type="monotone" dataKey="income" stroke="#16a34a" strokeWidth={2} name="Receitas estimadas" />
@@ -175,7 +180,7 @@ export function FinancialGraphs({ analytics, formatMonthLabel }: FinancialGraphs
         )}
       </div>
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-gray-500 dark:text-slate-400">
         Alguns elementos internos dos gráficos do Recharts têm navegação por teclado limitada; os resumos textuais acima cobrem os principais insights para leitura assistiva.
       </p>
     </section>

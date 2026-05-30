@@ -74,8 +74,8 @@ function formatPercent(value: number | null) {
 
 function TooltipContainer({ children, label }: { children: ReactNode; label: string | number | undefined }) {
   return (
-    <div className="rounded-md border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-md">
-      <p className="mb-1 font-semibold text-gray-900">{label}</p>
+    <div className="rounded-md border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-md dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+      <p className="mb-1 font-semibold text-gray-900 dark:text-slate-100">{label}</p>
       <div className="space-y-0.5">{children}</div>
     </div>
   )
@@ -126,7 +126,7 @@ export function ForecastTooltip({ active, payload, label }: TooltipProps<number,
       <p>Receitas estimadas: {currencyFormatter.format(raw.income)}</p>
       <p>Despesas estimadas: {currencyFormatter.format(raw.expense)}</p>
       <p>Saldo estimado: {currencyFormatter.format(raw.balance)}</p>
-      <p className={raw.balance < 0 ? 'text-red-600' : 'text-gray-700'}>{balanceStatus}</p>
+      <p className={raw.balance < 0 ? 'text-red-600 dark:text-red-300' : 'text-gray-700 dark:text-slate-200'}>{balanceStatus}</p>
     </TooltipContainer>
   )
 }

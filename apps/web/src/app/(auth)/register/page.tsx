@@ -43,17 +43,17 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-10">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-10 dark:bg-slate-950">
       <main
-        className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-8 shadow-sm"
+        className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         aria-labelledby="register-title"
       >
         <div className="mb-6 text-center">
-          <p className="text-sm font-medium text-blue-600">Comece agora</p>
-          <h1 id="register-title" className="mt-2 text-2xl font-semibold text-gray-900">
+          <p className="text-sm font-medium text-blue-600 dark:text-blue-300">Comece agora</p>
+          <h1 id="register-title" className="mt-2 text-2xl font-semibold text-gray-900 dark:text-slate-100">
             Crie sua conta
           </h1>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">
             Organize seus projetos e mantenha seus clientes informados.
           </p>
         </div>
@@ -92,18 +92,18 @@ export default function RegisterPage() {
             description="Use no mínimo 6 caracteres para manter sua conta segura."
             error={errors.password}
           />
-          <div aria-live="assertive" className="min-h-[1.5rem] text-sm text-red-600">
+          <div aria-live="assertive" className="min-h-[1.5rem] text-sm text-red-600 dark:text-red-300">
             {error}
           </div>
           <Button type="submit" loading={loading} className="mt-1 w-full">
             Criar Conta
           </Button>
         </form>
-        <p className="mt-5 text-center text-sm text-gray-600">
+        <p className="mt-5 text-center text-sm text-gray-600 dark:text-slate-300">
           Já tem conta?{' '}
           <Link
             href="/login"
-            className="font-medium text-blue-600 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            className="font-medium text-blue-600 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:text-blue-300 dark:focus-visible:ring-offset-slate-900"
           >
             Entrar
           </Link>
