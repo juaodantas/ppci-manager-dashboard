@@ -4,6 +4,11 @@ import type { FixedCost } from '@manager/domain'
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
+function toCurrencyValue(value: number) {
+  const parsedValue = Number(value)
+  return Number.isFinite(parsedValue) ? parsedValue : 0
+}
+
 export function FixedCostsSummaryCards({
   fixedCosts,
   competenceYear,
@@ -14,7 +19,7 @@ export function FixedCostsSummaryCards({
   competenceMonth: number
 }) {
   const costs = fixedCosts ?? []
-  const baseTotal = costs.reduce((total, cost) => total + cost.amount, 0)
+  const baseTotal = costs.reduce((total, cost) => total + toCurrencyValue(cost.amount), 0)
   const competence = `${String(competenceMonth).padStart(2, '0')}/${competenceYear}`
 
   return (
