@@ -4,6 +4,11 @@ import type { VariableCost } from '@manager/domain'
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
+function toCurrencyValue(value: number) {
+  const parsedValue = Number(value)
+  return Number.isFinite(parsedValue) ? parsedValue : 0
+}
+
 export function VariableCostsSummaryCards({
   variableCosts,
 }: {
@@ -11,11 +16,16 @@ export function VariableCostsSummaryCards({
 }) {
   const costs = variableCosts ?? []
   const totals = costs.reduce(
-    (acc, cost) => ({
-      base: acc.base + cost.amount,
-      interest: acc.interest + cost.interest_amount,
-      total: acc.total + cost.amount + cost.interest_amount,
-    }),
+    (acc, cost) => {
+      const baseAmount = toCurrencyValue(cost.amount)
+      const interestAmount = toCurrencyValue(cost.interest_amount)
+
+      return {
+        base: acc.base + baseAmount,
+        interest: acc.interest + interestAmount,
+        total: acc.total + baseAmount + interestAmount,
+      }
+    },
     { base: 0, interest: 0, total: 0 },
   )
 
