@@ -36,7 +36,7 @@ export const CompanyRepository = {
       ? await sql`
         SELECT *, COUNT(*) OVER()::int AS total_count
         FROM companies
-        WHERE type = ${type}
+        WHERE type = ${type}::company_type_enum
         ORDER BY created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `
@@ -66,7 +66,7 @@ export const CompanyRepository = {
           ${data.name},
           ${data.cnpj},
           ${data.responsible},
-          ${data.type},
+          ${data.type}::company_type_enum,
           NOW(),
           NOW()
         )
@@ -89,7 +89,7 @@ export const CompanyRepository = {
           name = COALESCE(${data.name ?? null}, name),
           cnpj = COALESCE(${data.cnpj ?? null}, cnpj),
           responsible = COALESCE(${data.responsible ?? null}, responsible),
-          type = COALESCE(${data.type ?? null}, type),
+          type = COALESCE(${data.type ?? null}::company_type_enum, type),
           updated_at = NOW()
         WHERE id = ${id}
         RETURNING *
