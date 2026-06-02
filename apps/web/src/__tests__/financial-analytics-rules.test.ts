@@ -3,6 +3,7 @@ import {
   buildHistoricalBase,
   listMonths,
   percentageMonthOverMonth,
+  resolveMonthlyDueDate,
   resolveTrendValues,
 } from '../../../../supabase/functions/api/repositories/financial-analytics.logic'
 import { isCompanyInScope } from '../../../../supabase/functions/api/routes/financial-analytics.auth'
@@ -25,6 +26,13 @@ describe('financial analytics rules', () => {
     const months = listMonths('2026-01-01', '2026-03-31')
     const historical = buildHistoricalBase(months, [])
     expect(historical).toEqual([])
+  })
+
+  it('clamps fixed cost due date to the last valid day of the month', () => {
+    expect(resolveMonthlyDueDate(2026, 4, 31)).toBe('2026-04-30')
+    expect(resolveMonthlyDueDate(2026, 2, 30)).toBe('2026-02-28')
+    expect(resolveMonthlyDueDate(2028, 2, 29)).toBe('2028-02-29')
+    expect(resolveMonthlyDueDate(2026, 5, 31)).toBe('2026-05-31')
   })
 
   it('forecast trend uses pending plus average of last 3 months', () => {

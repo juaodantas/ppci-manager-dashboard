@@ -105,9 +105,10 @@ export const FinancialRepository = {
               'fixed_cost'        AS source_type,
               fc.id               AS source_id,
               (fc.amount + COALESCE(fci.interest_amount, 0))::float,
-              LEAST(
-                make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
-                (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
+              make_date(
+                EXTRACT(year FROM gs)::int,
+                EXTRACT(month FROM gs)::int,
+                LEAST(fc.due_day::int, EXTRACT(day FROM (date_trunc('month', gs) + interval '1 month' - interval '1 day'))::int)
               )                   AS date,
               fc.name             AS description,
               fc.created_at
@@ -217,9 +218,10 @@ export const FinancialRepository = {
       SELECT
         'expense' AS type,
         (fc.amount + COALESCE(fci.interest_amount, 0))::float AS amount,
-        LEAST(
-          make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
-          (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
+        make_date(
+          EXTRACT(year FROM gs)::int,
+          EXTRACT(month FROM gs)::int,
+          LEAST(fc.due_day::int, EXTRACT(day FROM (date_trunc('month', gs) + interval '1 month' - interval '1 day'))::int)
         ) AS date
       FROM fixed_costs fc
       CROSS JOIN LATERAL generate_series(
@@ -292,9 +294,10 @@ export const FinancialRepository = {
         ),
         fixed_cost_by_month AS (
           SELECT
-            date_trunc('month', LEAST(
-              make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
-              (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
+            date_trunc('month', make_date(
+              EXTRACT(year FROM gs)::int,
+              EXTRACT(month FROM gs)::int,
+              LEAST(fc.due_day::int, EXTRACT(day FROM (date_trunc('month', gs) + interval '1 month' - interval '1 day'))::int)
             ))::date::text AS month,
             COALESCE(SUM(fc.amount + COALESCE(fci.interest_amount, 0)), 0)::float AS fixed_expense
           FROM fixed_costs fc
@@ -311,9 +314,10 @@ export const FinancialRepository = {
             AND fc.start_date <= ${date_to}::date
             AND COALESCE(fc.end_date, ${date_to}::date) >= ${date_from}::date
             AND (${company_id ?? null}::uuid IS NULL OR fc.company_id = ${company_id ?? null}::uuid)
-          GROUP BY date_trunc('month', LEAST(
-            make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
-            (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
+          GROUP BY date_trunc('month', make_date(
+            EXTRACT(year FROM gs)::int,
+            EXTRACT(month FROM gs)::int,
+            LEAST(fc.due_day::int, EXTRACT(day FROM (date_trunc('month', gs) + interval '1 month' - interval '1 day'))::int)
           ))
         ),
         variable_cost_by_month AS (
@@ -353,9 +357,10 @@ export const FinancialRepository = {
       ` as Promise<ForecastIncomeRow[]>, queryTimeoutMs, 'loading pending forecast income'),
       withTimeout(sql`
         SELECT
-          date_trunc('month', LEAST(
-            make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
-            (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
+          date_trunc('month', make_date(
+            EXTRACT(year FROM gs)::int,
+            EXTRACT(month FROM gs)::int,
+            LEAST(fc.due_day::int, EXTRACT(day FROM (date_trunc('month', gs) + interval '1 month' - interval '1 day'))::int)
           ))::date::text AS month,
           COALESCE(SUM(fc.amount + COALESCE(fci.interest_amount, 0)), 0)::float AS fixed_expense
         FROM fixed_costs fc
@@ -372,9 +377,10 @@ export const FinancialRepository = {
           AND (${company_id ?? null}::uuid IS NULL OR fc.company_id = ${company_id ?? null}::uuid)
           AND fc.start_date <= (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
           AND COALESCE(fc.end_date, (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date) >= date_trunc('month', gs)::date
-        GROUP BY date_trunc('month', LEAST(
-          make_date(EXTRACT(year FROM gs)::int, EXTRACT(month FROM gs)::int, fc.due_day),
-          (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
+        GROUP BY date_trunc('month', make_date(
+          EXTRACT(year FROM gs)::int,
+          EXTRACT(month FROM gs)::int,
+          LEAST(fc.due_day::int, EXTRACT(day FROM (date_trunc('month', gs) + interval '1 month' - interval '1 day'))::int)
         ))
       ` as Promise<ForecastFixedExpenseRow[]>, queryTimeoutMs, 'loading fixed expense forecast')
     ])

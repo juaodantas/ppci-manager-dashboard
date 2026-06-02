@@ -32,6 +32,12 @@ export function addMonths(date: Date, count: number): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + count, 1))
 }
 
+export function resolveMonthlyDueDate(year: number, month: number, dueDay: number): string {
+  const lastDayOfMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const resolvedDay = Math.min(dueDay, lastDayOfMonth)
+  return `${year}-${String(month).padStart(2, '0')}-${String(resolvedDay).padStart(2, '0')}`
+}
+
 export function listMonths(from: string, to: string): string[] {
   const start = monthStart(from)
   const end = monthStart(to)
