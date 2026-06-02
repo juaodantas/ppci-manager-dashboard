@@ -16,6 +16,7 @@ Reorganizar a pagina financeira em abas independentes para reduzir altura acumul
 - FIN-TABS-004: A aba Custos Variaveis deve exibir um resumo simples dos custos variaveis e a tabela de custos variaveis.
 - FIN-TABS-005: A aba Graficos deve manter o comportamento atual de carregamento, erro, estado vazio e exibicao dos graficos.
 - FIN-TABS-006: A mudanca nao deve alterar API, schema de banco ou contratos de dados.
+- FIN-TABS-007: As tabelas de Custos Fixos e Custos Variaveis devem limitar a altura da area da tabela e permitir scroll interno com cabecalho fixo, seguindo o padrao da tabela de Lancamentos.
 
 ## Fora de escopo
 
@@ -27,3 +28,4 @@ Reorganizar a pagina financeira em abas independentes para reduzir altura acumul
 
 - Typecheck/build do frontend deve passar.
 - As quatro abas devem alternar sem desmontar modais e fluxos de criacao/edicao existentes.
+- Custos Fixos e Custos Variaveis devem manter o cabecalho visivel ao rolar muitos registros.

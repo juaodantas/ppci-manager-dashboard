@@ -27,9 +27,9 @@ export function VariableCostsSection({
         <h2 className="font-medium text-gray-900">Custos Variáveis</h2>
         <Button size="sm" onClick={onOpenCreate}>+ Novo Custo</Button>
       </div>
-      <div className="overflow-x-auto">
+      <div className="max-h-[32rem] overflow-auto">
       <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+        <thead className="sticky top-0 bg-gray-50">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nome</th>
             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Categoria</th>
