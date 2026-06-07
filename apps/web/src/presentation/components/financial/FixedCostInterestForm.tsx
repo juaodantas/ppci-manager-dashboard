@@ -38,8 +38,8 @@ export function FixedCostInterestForm({
       }}
       className="flex flex-col gap-4"
     >
-      <Input label="Competência - Ano *" type="number" min="1900" max="9999" value={year} onChange={(e) => setYear(e.target.value)} required />
-      <Input label="Competência - Mês *" type="number" min="1" max="12" value={month} onChange={(e) => setMonth(e.target.value)} required />
+      <Input label="Ano *" type="number" min="1900" max="9999" value={year} onChange={(e) => setYear(e.target.value)} required />
+      <Input label="Mês *" type="number" min="1" max="12" value={month} onChange={(e) => setMonth(e.target.value)} required />
       <Input label="Valor adicional de juros *" type="number" min="0" step="0.01" value={interestAmount} onChange={(e) => setInterestAmount(e.target.value)} required />
       <Button type="submit" loading={loading}>Salvar juros</Button>
     </form>

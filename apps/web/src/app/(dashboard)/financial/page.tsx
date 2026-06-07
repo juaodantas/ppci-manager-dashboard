@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { FixedCost, VariableCost } from '@manager/domain'
 import { Modal } from '../../../presentation/components/ui/Modal'
 import { ConfirmDialog } from '../../../presentation/components/ui/ConfirmDialog'
@@ -12,9 +12,9 @@ import { FinancialReportSummaryCards } from '../../../presentation/components/fi
 import { FinancialMonthlyTable } from '../../../presentation/components/financial/FinancialMonthlyTable'
 import { FinancialEntriesTable } from '../../../presentation/components/financial/FinancialEntriesTable'
 import { VariableCostsSection } from '../../../presentation/components/financial/VariableCostsSection'
-import { FixedCostsSection } from '../../../presentation/components/financial/FixedCostsSection'
+import { FixedCostsTab } from '../../../presentation/components/financial/FixedCostsTab'
+import type { FixedCostTabCompetence } from '../../../presentation/components/financial/FixedCostsTab'
 import { VariableCostsSummaryCards } from '../../../presentation/components/financial/VariableCostsSummaryCards'
-import { FixedCostsSummaryCards } from '../../../presentation/components/financial/FixedCostsSummaryCards'
 import { FixedCostForm } from '../../../presentation/components/financial/FixedCostForm'
 import { VariableCostForm } from '../../../presentation/components/financial/VariableCostForm'
 import { FixedCostInterestForm } from '../../../presentation/components/financial/FixedCostInterestForm'
@@ -47,12 +47,16 @@ import type {
 } from '../../../domain/repositories/fixed-cost.repository'
 import type { CreateVariableCostDto, UpdateVariableCostDto } from '../../../domain/repositories/variable-cost.repository'
 
-function getCompetenceFromDate(date: string) {
-  const parsed = new Date(`${date}T00:00:00`)
-  return {
-    year: parsed.getFullYear(),
-    month: parsed.getMonth() + 1,
-  }
+function currentCompetence(): FixedCostTabCompetence {
+  const now = new Date()
+  return { year: now.getFullYear(), month: now.getMonth() + 1 }
+}
+
+function monthRangeFromCompetence(competence: FixedCostTabCompetence) {
+  const from = `${competence.year}-${String(competence.month).padStart(2, '0')}-01`
+  const last = new Date(competence.year, competence.month, 0)
+  const to = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`
+  return { from, to }
 }
 
 function currentMonthRange() {
@@ -84,6 +88,8 @@ export default function FinancialPage() {
   const [variableCostToDelete, setVariableCostToDelete] = useState<VariableCost | undefined>()
   const [fixedCostToDelete, setFixedCostToDelete] = useState<FixedCost | undefined>()
   const [interestToDelete, setInterestToDelete] = useState<FixedCostInterest | undefined>()
+  const [fixedCostCompetence, setFixedCostCompetence] = useState<FixedCostTabCompetence>(() => currentCompetence())
+  const fixedCostCompetenceRange = useMemo(() => monthRangeFromCompetence(fixedCostCompetence), [fixedCostCompetence])
 
   const { data: report, isLoading: reportLoading } = useFinancialReport({ date_from: dateFrom, date_to: dateTo, company_id: companyId || undefined })
   const analytics = useFinancialAnalytics({
@@ -93,7 +99,7 @@ export default function FinancialPage() {
     horizon_months: 12,
   })
   const { data: entries } = useFinancialEntries({ date_from: dateFrom, date_to: dateTo, company_id: companyId || undefined, limit: 50, offset: 0 })
-  const { data: fixedCosts } = useFixedCosts({ date_from: dateFrom, date_to: dateTo })
+  const { data: fixedCosts } = useFixedCosts({ date_from: fixedCostCompetenceRange.from, date_to: fixedCostCompetenceRange.to })
   const { data: variableCosts } = useVariableCosts({ date_from: dateFrom, date_to: dateTo })
   const createFc = useCreateFixedCost()
   const updateFc = useUpdateFixedCost()
@@ -105,7 +111,7 @@ export default function FinancialPage() {
   const createFixedCostInterest = useCreateFixedCostInterest()
   const updateFixedCostInterest = useUpdateFixedCostInterest()
   const deleteFixedCostInterest = useDeleteFixedCostInterest()
-  const { year: competenceYear, month: competenceMonth } = getCompetenceFromDate(dateTo)
+  const { year: competenceYear, month: competenceMonth } = fixedCostCompetence
   const { data: selectedFixedCostInterests } = useFixedCostInterests(
     selectedFixedCost?.id ?? null,
     { reference_year: competenceYear },
@@ -125,6 +131,10 @@ export default function FinancialPage() {
     if (!analytics.error) return ''
     return getApiErrorMessage(analytics.error, 'Erro ao carregar analytics')
   }, [analytics.error])
+
+  const handleFixedCostCompetenceChange = useCallback((competence: FixedCostTabCompetence) => {
+    setFixedCostCompetence(competence)
+  }, [])
 
   const handleFcSubmit = async (dto: CreateFixedCostDto | UpdateFixedCostDto) => {
     if (editingFc) {
@@ -165,15 +175,22 @@ export default function FinancialPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <FinancialFiltersBar
-        dateFrom={dateFrom}
-        dateTo={dateTo}
-        companyId={companyId}
-        companyOptions={companyFilterOptions}
-        onDateFromChange={setDateFrom}
-        onDateToChange={setDateTo}
-        onCompanyChange={setCompanyId}
-      />
+      {activeTab === 'fixed-costs' ? (
+        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">Financeiro</h1>
+          <p className="text-sm text-gray-500">A aba Custos Fixos usa navegação mensal própria.</p>
+        </div>
+      ) : (
+        <FinancialFiltersBar
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          companyId={companyId}
+          companyOptions={companyFilterOptions}
+          onDateFromChange={setDateFrom}
+          onDateToChange={setDateTo}
+          onCompanyChange={setCompanyId}
+        />
+      )}
 
       <FinancialTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -196,15 +213,9 @@ export default function FinancialPage() {
         hidden={activeTab !== 'fixed-costs'}
         className="flex flex-col gap-8"
       >
-        <FixedCostsSummaryCards
+        <FixedCostsTab
+          companyId={companyId}
           fixedCosts={fixedCosts}
-          competenceYear={competenceYear}
-          competenceMonth={competenceMonth}
-        />
-        <FixedCostsSection
-          fixedCosts={fixedCosts}
-          competenceYear={competenceYear}
-          competenceMonth={competenceMonth}
           onOpenCreate={() => setFcModalOpen(true)}
           onOpenInterestModal={(cost) => {
             setSelectedFixedCost(cost)
@@ -212,15 +223,16 @@ export default function FinancialPage() {
             setInterestError('')
             setFixedCostInterestModalOpen(true)
           }}
-          onEdit={(cost) => {
+          onEditRecurring={(cost) => {
             setEditingFc(cost)
             setFcModalOpen(true)
           }}
-          onDelete={(id) => {
+          onDeleteRecurring={(id) => {
             const selectedFixedCostToDelete = fixedCosts?.find((item) => item.id === id)
             if (!selectedFixedCostToDelete) return
             setFixedCostToDelete(selectedFixedCostToDelete)
           }}
+          onCompetenceChange={handleFixedCostCompetenceChange}
         />
       </div>
 
@@ -303,7 +315,7 @@ export default function FinancialPage() {
 
       <Modal
         open={fixedCostInterestModalOpen}
-        title={selectedFixedCost ? `Juros de ${selectedFixedCost.name}` : 'Juros por competência'}
+        title={selectedFixedCost ? `Juros de ${selectedFixedCost.name}` : 'Juros por mês'}
         onClose={() => {
           setFixedCostInterestModalOpen(false)
           setSelectedFixedCost(undefined)

@@ -51,6 +51,11 @@ export function FixedCostForm({
       }}
       className="flex flex-col gap-4"
     >
+      {initial && (
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          Você está editando o cadastro recorrente. Meses sem ajuste próprio podem usar este novo valor.
+        </p>
+      )}
       <Input label="Nome *" value={name} onChange={(e) => setName(e.target.value)} required />
       <Input label="Valor *" type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
       <Input label="Dia de vencimento *" type="number" min="1" max="31" value={dueDay} onChange={(e) => setDueDay(e.target.value)} required />

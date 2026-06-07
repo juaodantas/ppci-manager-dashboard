@@ -9,6 +9,7 @@ import { QuoteHttpRepository } from '../http/quote.http-repository'
 import { ProjectHttpRepository } from '../http/project.http-repository'
 import { PaymentHttpRepository } from '../http/payment.http-repository'
 import { FixedCostHttpRepository } from '../http/fixed-cost.http-repository'
+import { FixedCostMonthHttpRepository } from '../http/fixed-cost-month.http-repository'
 import { VariableCostHttpRepository } from '../http/variable-cost.http-repository'
 import { FinancialHttpRepository } from '../http/financial.http-repository'
 import { LoginUseCase } from '../../application/use-cases/auth/login.use-case'
@@ -76,6 +77,11 @@ import {
   DeleteFixedCostInterestUseCase,
 } from '../../application/use-cases/fixed-cost/fixed-cost.use-cases'
 import {
+  CloseFixedCostMonthUseCase,
+  GetFixedCostMonthUseCase,
+  UpdateFixedCostMonthEntryUseCase,
+} from '../../application/use-cases/fixed-cost-month/fixed-cost-month.use-cases'
+import {
   GetVariableCostsUseCase,
   CreateVariableCostUseCase,
   UpdateVariableCostUseCase,
@@ -117,6 +123,7 @@ const quoteRepo = new QuoteHttpRepository(http)
 const projectRepo = new ProjectHttpRepository(http)
 const paymentRepo = new PaymentHttpRepository(http)
 const fixedCostRepo = new FixedCostHttpRepository(http)
+const fixedCostMonthRepo = new FixedCostMonthHttpRepository(http)
 const variableCostRepo = new VariableCostHttpRepository(http)
 const financialRepo = new FinancialHttpRepository(http)
 
@@ -203,6 +210,12 @@ export const container = {
     createInterest: new CreateFixedCostInterestUseCase(fixedCostRepo),
     updateInterest: new UpdateFixedCostInterestUseCase(fixedCostRepo),
     deleteInterest: new DeleteFixedCostInterestUseCase(fixedCostRepo),
+  },
+
+  fixedCostMonth: {
+    get: new GetFixedCostMonthUseCase(fixedCostMonthRepo),
+    close: new CloseFixedCostMonthUseCase(fixedCostMonthRepo),
+    updateEntry: new UpdateFixedCostMonthEntryUseCase(fixedCostMonthRepo),
   },
 
   variableCosts: {

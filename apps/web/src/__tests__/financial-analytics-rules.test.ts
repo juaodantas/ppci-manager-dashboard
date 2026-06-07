@@ -12,6 +12,7 @@ import {
   buildFinancialAnalyticsParams,
   buildFinancialAnalyticsQueryKey,
 } from '../presentation/hooks/useFinancial'
+import { buildFixedCostMonthQueryKey } from '../presentation/hooks/useFixedCostCompetence'
 
 describe('financial analytics rules', () => {
   it('returns null for M/M when previous is zero', () => {
@@ -113,5 +114,20 @@ describe('financial analytics rules', () => {
     expect(aggregateKey).not.toEqual(companyKey)
     expect(aggregateKey[2]).toEqual({ scope: 'all' })
     expect(companyKey[2]).toEqual({ scope: 'company', company_id: 'company-1' })
+  })
+
+  it('uses stable fixed cost month query keys by competence and scope', () => {
+    expect(buildFixedCostMonthQueryKey({ reference_year: 2026, reference_month: 6 })).toEqual([
+      'fixed-cost-month',
+      2026,
+      6,
+      'all',
+    ])
+    expect(buildFixedCostMonthQueryKey({ reference_year: 2026, reference_month: 6, company_id: 'company-1' })).toEqual([
+      'fixed-cost-month',
+      2026,
+      6,
+      'company-1',
+    ])
   })
 })

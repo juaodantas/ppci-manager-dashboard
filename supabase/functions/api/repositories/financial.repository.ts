@@ -12,6 +12,7 @@ import {
   resolveTrendValues,
   type HistoricalSourceRow,
 } from './financial-analytics.logic.ts'
+import { fixedCostMonthlyEntriesSql } from './financial-fixed-cost-monthly.sql.ts'
 
 type FinancialEntryRow = {
   id: string
@@ -88,7 +89,7 @@ export const FinancialRepository = {
       ? await sql`
           SELECT *, COUNT(*) OVER()::int AS total_count
           FROM (
-      SELECT fe.id, fe.type::text, fe.source_type, fe.source_id, fe.amount::float, fe.date, fe.description, fe.created_at
+      SELECT fe.id::text AS id, fe.type::text, fe.source_type, fe.source_id::text AS source_id, fe.amount::float, fe.date, fe.description, fe.created_at
       FROM financial_entries fe
       JOIN payments p ON p.id = fe.source_id AND fe.source_type = 'payment'
       JOIN projects pr ON pr.id = p.project_id
@@ -99,42 +100,17 @@ export const FinancialRepository = {
 
             UNION ALL
 
-            SELECT
-              fc.id,
-              'expense'           AS type,
-              'fixed_cost'        AS source_type,
-              fc.id               AS source_id,
-              (fc.amount + COALESCE(fci.interest_amount, 0))::float,
-              make_date(
-                EXTRACT(year FROM gs)::int,
-                EXTRACT(month FROM gs)::int,
-                LEAST(fc.due_day::int, EXTRACT(day FROM (date_trunc('month', gs) + interval '1 month' - interval '1 day'))::int)
-              )                   AS date,
-              fc.name             AS description,
-              fc.created_at
-            FROM fixed_costs fc
-            CROSS JOIN LATERAL generate_series(
-              date_trunc('month', GREATEST(fc.start_date, ${date_from}::date)),
-              date_trunc('month', LEAST(COALESCE(fc.end_date, ${date_to}::date), ${date_to}::date)),
-              '1 month'::interval
-            ) AS gs
-            LEFT JOIN fixed_cost_interests fci
-              ON fci.fixed_cost_id = fc.id
-              AND fci.reference_year = EXTRACT(year FROM gs)::int
-              AND fci.reference_month = EXTRACT(month FROM gs)::int
-            WHERE fc.active = true
-              AND fc.start_date <= ${date_to}::date
-              AND COALESCE(fc.end_date, ${date_to}::date) >= ${date_from}::date
-      AND (${type ?? null}::text IS NULL OR 'expense' = ${type ?? null}::text)
-      AND (${company_id ?? null}::uuid IS NULL OR fc.company_id = ${company_id ?? null}::uuid)
+            SELECT id, type, source_type, source_id, amount, date, description, created_at
+            FROM (${fixedCostMonthlyEntriesSql({ date_from, date_to, company_id })}) fixed_cost_entries
+            WHERE (${type ?? null}::text IS NULL OR 'expense' = ${type ?? null}::text)
 
       UNION ALL
 
             SELECT
-              vc.id,
+              vc.id::text AS id,
               'expense'           AS type,
               'variable_cost'     AS source_type,
-              vc.id               AS source_id,
+              vc.id::text         AS source_id,
               (vc.amount + COALESCE(vc.interest_amount, 0))::float,
               vc.date,
               COALESCE(vc.description, vc.name) AS description,
@@ -172,28 +148,16 @@ export const FinancialRepository = {
     const { date_from, date_to, company_id } = params
 
     const [summary] = await sql`
-      WITH all_entries AS (
+      WITH fixed_cost_entries AS (
+        ${fixedCostMonthlyEntriesSql({ date_from, date_to, company_id })}
+      ), all_entries AS (
       SELECT fe.type::text, fe.amount FROM financial_entries fe
       JOIN payments p ON p.id = fe.source_id AND fe.source_type = 'payment'
       JOIN projects pr ON pr.id = p.project_id
       WHERE fe.date BETWEEN ${date_from}::date AND ${date_to}::date
       AND (${company_id ?? null}::uuid IS NULL OR pr.company_id = ${company_id ?? null}::uuid)
       UNION ALL
-      SELECT 'expense' AS type, (fc.amount + COALESCE(fci.interest_amount, 0))::float AS amount
-      FROM fixed_costs fc
-      CROSS JOIN LATERAL generate_series(
-        date_trunc('month', GREATEST(fc.start_date, ${date_from}::date)),
-        date_trunc('month', LEAST(COALESCE(fc.end_date, ${date_to}::date), ${date_to}::date)),
-        '1 month'::interval
-      ) AS gs
-      LEFT JOIN fixed_cost_interests fci
-        ON fci.fixed_cost_id = fc.id
-        AND fci.reference_year = EXTRACT(year FROM gs)::int
-        AND fci.reference_month = EXTRACT(month FROM gs)::int
-      WHERE fc.active = true
-      AND fc.start_date <= ${date_to}::date
-      AND COALESCE(fc.end_date, ${date_to}::date) >= ${date_from}::date
-      AND (${company_id ?? null}::uuid IS NULL OR fc.company_id = ${company_id ?? null}::uuid)
+      SELECT type, amount FROM fixed_cost_entries
       UNION ALL
       SELECT 'expense' AS type, (vc.amount + COALESCE(vc.interest_amount, 0))::float AS amount
       FROM variable_costs vc
@@ -208,35 +172,16 @@ export const FinancialRepository = {
     `
 
     const monthRows = await sql`
-      WITH all_entries AS (
+      WITH fixed_cost_entries AS (
+        ${fixedCostMonthlyEntriesSql({ date_from, date_to, company_id })}
+      ), all_entries AS (
       SELECT fe.type::text, fe.amount, fe.date FROM financial_entries fe
       JOIN payments p ON p.id = fe.source_id AND fe.source_type = 'payment'
       JOIN projects pr ON pr.id = p.project_id
       WHERE fe.date BETWEEN ${date_from}::date AND ${date_to}::date
       AND (${company_id ?? null}::uuid IS NULL OR pr.company_id = ${company_id ?? null}::uuid)
       UNION ALL
-      SELECT
-        'expense' AS type,
-        (fc.amount + COALESCE(fci.interest_amount, 0))::float AS amount,
-        make_date(
-          EXTRACT(year FROM gs)::int,
-          EXTRACT(month FROM gs)::int,
-          LEAST(fc.due_day::int, EXTRACT(day FROM (date_trunc('month', gs) + interval '1 month' - interval '1 day'))::int)
-        ) AS date
-      FROM fixed_costs fc
-      CROSS JOIN LATERAL generate_series(
-        date_trunc('month', GREATEST(fc.start_date, ${date_from}::date)),
-        date_trunc('month', LEAST(COALESCE(fc.end_date, ${date_to}::date), ${date_to}::date)),
-        '1 month'::interval
-      ) AS gs
-      LEFT JOIN fixed_cost_interests fci
-        ON fci.fixed_cost_id = fc.id
-        AND fci.reference_year = EXTRACT(year FROM gs)::int
-        AND fci.reference_month = EXTRACT(month FROM gs)::int
-      WHERE fc.active = true
-      AND fc.start_date <= ${date_to}::date
-      AND COALESCE(fc.end_date, ${date_to}::date) >= ${date_from}::date
-      AND (${company_id ?? null}::uuid IS NULL OR fc.company_id = ${company_id ?? null}::uuid)
+      SELECT type, amount, date FROM fixed_cost_entries
       UNION ALL
       SELECT
         'expense' AS type,
@@ -277,10 +222,14 @@ export const FinancialRepository = {
   }): Promise<FinancialAnalytics> {
     const { company_id, date_from, date_to, horizon_months } = params
     const queryTimeoutMs = 4_000
+    const forecastDateFrom = formatMonth(addMonths(monthStart(date_to), 1))
+    const forecastDateTo = formatMonth(addMonths(monthStart(date_to), horizon_months))
 
     const [historicalRows, pendingIncomeRows, forecastFixedExpenseRows] = await Promise.all([
       withTimeout(sql`
-        WITH payment_income_by_month AS (
+        WITH fixed_cost_entries AS (
+          ${fixedCostMonthlyEntriesSql({ date_from, date_to, company_id })}
+        ), payment_income_by_month AS (
           SELECT
             date_trunc('month', fe.date)::date::text AS month,
             COALESCE(SUM(fe.amount), 0)::float AS income
@@ -293,32 +242,10 @@ export const FinancialRepository = {
           GROUP BY date_trunc('month', fe.date)
         ),
         fixed_cost_by_month AS (
-          SELECT
-            date_trunc('month', make_date(
-              EXTRACT(year FROM gs)::int,
-              EXTRACT(month FROM gs)::int,
-              LEAST(fc.due_day::int, EXTRACT(day FROM (date_trunc('month', gs) + interval '1 month' - interval '1 day'))::int)
-            ))::date::text AS month,
-            COALESCE(SUM(fc.amount + COALESCE(fci.interest_amount, 0)), 0)::float AS fixed_expense
-          FROM fixed_costs fc
-          CROSS JOIN LATERAL generate_series(
-            date_trunc('month', GREATEST(fc.start_date, ${date_from}::date)),
-            date_trunc('month', LEAST(COALESCE(fc.end_date, ${date_to}::date), ${date_to}::date)),
-            '1 month'::interval
-          ) AS gs
-          LEFT JOIN fixed_cost_interests fci
-            ON fci.fixed_cost_id = fc.id
-            AND fci.reference_year = EXTRACT(year FROM gs)::int
-            AND fci.reference_month = EXTRACT(month FROM gs)::int
-          WHERE fc.active = true
-            AND fc.start_date <= ${date_to}::date
-            AND COALESCE(fc.end_date, ${date_to}::date) >= ${date_from}::date
-            AND (${company_id ?? null}::uuid IS NULL OR fc.company_id = ${company_id ?? null}::uuid)
-          GROUP BY date_trunc('month', make_date(
-            EXTRACT(year FROM gs)::int,
-            EXTRACT(month FROM gs)::int,
-            LEAST(fc.due_day::int, EXTRACT(day FROM (date_trunc('month', gs) + interval '1 month' - interval '1 day'))::int)
-          ))
+          SELECT date_trunc('month', date)::date::text AS month,
+            COALESCE(SUM(amount), 0)::float AS fixed_expense
+          FROM fixed_cost_entries
+          GROUP BY date_trunc('month', date)
         ),
         variable_cost_by_month AS (
           SELECT
@@ -356,32 +283,13 @@ export const FinancialRepository = {
         GROUP BY date_trunc('month', p.due_date)
       ` as Promise<ForecastIncomeRow[]>, queryTimeoutMs, 'loading pending forecast income'),
       withTimeout(sql`
-        SELECT
-          date_trunc('month', make_date(
-            EXTRACT(year FROM gs)::int,
-            EXTRACT(month FROM gs)::int,
-            LEAST(fc.due_day::int, EXTRACT(day FROM (date_trunc('month', gs) + interval '1 month' - interval '1 day'))::int)
-          ))::date::text AS month,
-          COALESCE(SUM(fc.amount + COALESCE(fci.interest_amount, 0)), 0)::float AS fixed_expense
-        FROM fixed_costs fc
-        CROSS JOIN LATERAL generate_series(
-          date_trunc('month', ${date_to}::date + interval '1 month'),
-          date_trunc('month', ${date_to}::date + ${horizon_months}::int * interval '1 month'),
-          '1 month'::interval
-        ) AS gs
-        LEFT JOIN fixed_cost_interests fci
-          ON fci.fixed_cost_id = fc.id
-          AND fci.reference_year = EXTRACT(year FROM gs)::int
-          AND fci.reference_month = EXTRACT(month FROM gs)::int
-        WHERE fc.active = true
-          AND (${company_id ?? null}::uuid IS NULL OR fc.company_id = ${company_id ?? null}::uuid)
-          AND fc.start_date <= (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date
-          AND COALESCE(fc.end_date, (date_trunc('month', gs) + interval '1 month' - interval '1 day')::date) >= date_trunc('month', gs)::date
-        GROUP BY date_trunc('month', make_date(
-          EXTRACT(year FROM gs)::int,
-          EXTRACT(month FROM gs)::int,
-          LEAST(fc.due_day::int, EXTRACT(day FROM (date_trunc('month', gs) + interval '1 month' - interval '1 day'))::int)
-        ))
+        WITH fixed_cost_entries AS (
+          ${fixedCostMonthlyEntriesSql({ date_from: forecastDateFrom, date_to: forecastDateTo, company_id })}
+        )
+        SELECT date_trunc('month', date)::date::text AS month,
+          COALESCE(SUM(amount), 0)::float AS fixed_expense
+        FROM fixed_cost_entries
+        GROUP BY date_trunc('month', date)
       ` as Promise<ForecastFixedExpenseRow[]>, queryTimeoutMs, 'loading fixed expense forecast')
     ])
 

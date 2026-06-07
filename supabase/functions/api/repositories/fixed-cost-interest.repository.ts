@@ -63,7 +63,7 @@ export const FixedCostInterestRepository = {
       return toFixedCostInterest(rows[0] as FixedCostInterestRow)
     } catch (err: unknown) {
       if (isUniqueViolation(err)) {
-        throw conflict('Já existe juros cadastrado para esta competência neste custo fixo')
+        throw conflict('Já existe juros cadastrado para este mês neste custo fixo')
       }
       throw err
     }
@@ -93,7 +93,7 @@ export const FixedCostInterestRepository = {
       return rows.length > 0 ? toFixedCostInterest(rows[0] as FixedCostInterestRow) : null
     } catch (err: unknown) {
       if (isUniqueViolation(err)) {
-        throw conflict('Já existe juros cadastrado para esta competência neste custo fixo')
+        throw conflict('Já existe juros cadastrado para este mês neste custo fixo')
       }
       throw err
     }

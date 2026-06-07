@@ -25,7 +25,7 @@ export function FixedCostsSection({
     <div className="rounded-lg border border-gray-200 bg-white">
       <div className="flex items-center justify-between border-b px-6 py-4">
         <h2 className="font-medium text-gray-900">Custos Fixos</h2>
-        <p className="text-xs text-gray-500">Competência aplicada: {String(competenceMonth).padStart(2, '0')}/{competenceYear}</p>
+        <p className="text-xs text-gray-500">Mês selecionado: {String(competenceMonth).padStart(2, '0')}/{competenceYear}</p>
         <Button size="sm" onClick={onOpenCreate}>+ Novo Custo Fixo</Button>
       </div>
       <div className="max-h-[32rem] overflow-auto">
@@ -35,7 +35,7 @@ export function FixedCostsSection({
             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nome</th>
             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Categoria</th>
             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Dia</th>
-            <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Juros competência</th>
+            <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Ajuste do mês</th>
             <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Total</th>
             <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Ações</th>
           </tr>
