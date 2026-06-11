@@ -24,14 +24,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-950">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-slate-950">
       <a
         href="#main-content"
         className="sr-only z-50 rounded-md bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-blue-300 dark:focus-visible:ring-offset-slate-950"
       >
         Ir para o conteúdo principal
       </a>
-      <div className="relative flex w-full">
+      <div className="relative flex min-h-0 w-full overflow-hidden">
         <div
           className={`fixed inset-0 z-30 bg-slate-900/40 transition-opacity sm:hidden ${
             isSidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
@@ -40,7 +40,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           onClick={() => setIsSidebarOpen(false)}
         />
         <aside
-          className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-gray-200 bg-white shadow-sm transition-transform duration-200 ease-out dark:border-slate-800 dark:bg-slate-900 sm:static sm:translate-x-0 sm:shadow-none ${
+          className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-gray-200 bg-white shadow-sm transition-transform duration-200 ease-out dark:border-slate-800 dark:bg-slate-900 sm:static sm:h-full sm:translate-x-0 sm:shadow-none ${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
           aria-label="Navegação principal"
@@ -87,8 +87,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </Button>
           </div>
         </aside>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-16 items-center gap-3 border-b border-gray-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 sm:px-8">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <header className="flex h-16 shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 sm:px-8">
             <button
               type="button"
               onClick={() => setIsSidebarOpen(true)}
@@ -111,7 +111,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </div>
           </header>
-          <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto p-6 sm:p-8">
+          <main
+            id="main-content"
+            data-scroll-lock-root="true"
+            tabIndex={-1}
+            className="min-h-0 flex-1 overflow-y-auto p-6 sm:p-8"
+          >
             {children}
           </main>
         </div>

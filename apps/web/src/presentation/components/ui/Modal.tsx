@@ -50,6 +50,19 @@ const lockBodyScroll = () => {
   return { previousOverflow, previousPaddingRight }
 }
 
+const lockScrollRoot = () => {
+  const scrollRoot = document.querySelector<HTMLElement>('[data-scroll-lock-root="true"]')
+
+  if (!scrollRoot) {
+    return null
+  }
+
+  const previousOverflow = scrollRoot.style.overflow
+  scrollRoot.style.overflow = 'hidden'
+
+  return { scrollRoot, previousOverflow }
+}
+
 export function Modal({ open, title, onClose, children, footer, description, descriptionId }: ModalProps) {
   const dialogId = useId()
   const titleId = useMemo(() => `${dialogId}-title`, [dialogId])
@@ -58,13 +71,16 @@ export function Modal({ open, title, onClose, children, footer, description, des
   const restoreFocusRef = useRef<HTMLElement | null>(null)
   const bodyOverflowRef = useRef<string | null>(null)
   const bodyPaddingRef = useRef<string | null>(null)
+  const scrollRootRef = useRef<{ scrollRoot: HTMLElement; previousOverflow: string } | null>(null)
 
   useEffect(() => {
     if (!open) return
+
     restoreFocusRef.current = document.activeElement as HTMLElement | null
     const { previousOverflow, previousPaddingRight } = lockBodyScroll()
     bodyOverflowRef.current = previousOverflow
     bodyPaddingRef.current = previousPaddingRight
+    scrollRootRef.current = lockScrollRoot()
 
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -97,8 +113,27 @@ export function Modal({ open, title, onClose, children, footer, description, des
     }
 
     document.addEventListener('keydown', handleKey)
+
     return () => {
       document.removeEventListener('keydown', handleKey)
+      const body = document.body
+
+      if (bodyOverflowRef.current !== null) {
+        body.style.overflow = bodyOverflowRef.current
+      }
+
+      if (bodyPaddingRef.current !== null) {
+        body.style.paddingRight = bodyPaddingRef.current
+      }
+
+      if (scrollRootRef.current) {
+        scrollRootRef.current.scrollRoot.style.overflow = scrollRootRef.current.previousOverflow
+      }
+
+      bodyOverflowRef.current = null
+      bodyPaddingRef.current = null
+      scrollRootRef.current = null
+      restoreFocusRef.current?.focus()
     }
   }, [open, onClose])
 
@@ -107,20 +142,6 @@ export function Modal({ open, title, onClose, children, footer, description, des
     const focusable = getFocusableElements(dialogRef.current)
     const initialFocus = focusable[0] ?? dialogRef.current
     initialFocus?.focus()
-  }, [open])
-
-  useEffect(() => {
-    if (open) return
-    const body = document.body
-    if (bodyOverflowRef.current !== null) {
-      body.style.overflow = bodyOverflowRef.current
-    }
-    if (bodyPaddingRef.current !== null) {
-      body.style.paddingRight = bodyPaddingRef.current
-    }
-    bodyOverflowRef.current = null
-    bodyPaddingRef.current = null
-    restoreFocusRef.current?.focus()
   }, [open])
 
   if (!open) return null
