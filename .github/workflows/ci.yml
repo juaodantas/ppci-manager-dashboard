@@ -40,7 +40,8 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Match the CLI used by the API deploy and the local environment.
+          version: 2.84.6
 
       - name: Validate migration files
         run: |

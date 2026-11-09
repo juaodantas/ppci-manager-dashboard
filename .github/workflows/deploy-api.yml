@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/deploy-api.yml'
       - 'supabase/**'
       - 'apps/api/**'
 
@@ -17,7 +18,8 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Keep the CLI compatible with supabase/config.toml and package-lock.json.
+          version: 2.84.6
 
       - name: Link project
         env:
