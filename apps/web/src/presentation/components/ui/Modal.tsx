@@ -7,6 +7,7 @@ interface ModalProps {
   open: boolean
   title: string
   onClose: () => void
+  closeDisabled?: boolean
   children: React.ReactNode
   footer?: React.ReactNode
   description?: string
@@ -63,7 +64,7 @@ const lockScrollRoot = () => {
   return { scrollRoot, previousOverflow }
 }
 
-export function Modal({ open, title, onClose, children, footer, description, descriptionId }: ModalProps) {
+export function Modal({ open, title, onClose, closeDisabled = false, children, footer, description, descriptionId }: ModalProps) {
   const dialogId = useId()
   const titleId = useMemo(() => `${dialogId}-title`, [dialogId])
   const resolvedDescriptionId = description ? `${dialogId}-description` : descriptionId
@@ -84,7 +85,7 @@ export function Modal({ open, title, onClose, children, footer, description, des
 
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose()
+        if (!closeDisabled) onClose()
         return
       }
 
@@ -135,7 +136,7 @@ export function Modal({ open, title, onClose, children, footer, description, des
       scrollRootRef.current = null
       restoreFocusRef.current?.focus()
     }
-  }, [open, onClose])
+  }, [open, onClose, closeDisabled])
 
   useEffect(() => {
     if (!open) return
@@ -148,7 +149,7 @@ export function Modal({ open, title, onClose, children, footer, description, des
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 sm:px-6">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px]" onClick={closeDisabled ? undefined : onClose} />
       <div
         ref={dialogRef}
         role="dialog"
@@ -162,7 +163,7 @@ export function Modal({ open, title, onClose, children, footer, description, des
           <h2 id={titleId} className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {title}
           </h2>
-          <Button variant="ghost" size="sm" onClick={onClose} aria-label="Fechar modal">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={closeDisabled} aria-label="Fechar modal">
             ✕
           </Button>
         </div>

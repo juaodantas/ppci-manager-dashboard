@@ -26,7 +26,8 @@ export function useCreateServiceCatalog() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (dto: CreateServiceCatalogDto) => container.serviceCatalog.create.execute(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['service-catalog'] }),
+    // Persistence has succeeded; refetch failures belong to the query UI, not the save flow.
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['service-catalog'] }).catch(() => undefined) },
   })
 }
 
@@ -35,7 +36,8 @@ export function useUpdateServiceCatalog() {
   return useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: UpdateServiceCatalogDto }) =>
       container.serviceCatalog.update.execute(id, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['service-catalog'] }),
+    // Do not keep the modal pending or report a saved update as a persistence failure.
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['service-catalog'] }).catch(() => undefined) },
   })
 }
 

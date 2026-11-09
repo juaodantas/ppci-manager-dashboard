@@ -63,15 +63,15 @@ export const updateCustomerSchema = z.object({
 // Service Catalog
 export const createServiceCatalogSchema = z.object({
   category_id: z.string().uuid(),
-  name: z.string().min(1, 'name is required'),
+  name: z.string().trim().min(1, 'name is required').max(255),
   description: z.string().optional(),
-  unit_type: z.string().optional(),
+  unit_type: z.string().trim().max(50).optional(),
 })
 
 export const updateServiceCatalogSchema = z.object({
-  name: z.string().min(1).optional(),
+  name: z.string().trim().min(1, 'name is required').max(255).optional(),
   description: z.string().optional(),
-  unit_type: z.string().optional(),
+  unit_type: z.string().trim().max(50).optional(),
 })
 
 export const addServicePriceSchema = z.object({

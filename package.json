@@ -17,6 +17,7 @@
   },
   "packageManager": "npm@10.9.2",
   "devDependencies": {
+    "jsdom": "^26.1.0",
     "supabase": "^2.84.6",
     "turbo": "^2.5.4"
   }

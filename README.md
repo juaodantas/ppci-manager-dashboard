@@ -59,7 +59,7 @@ npm install
 
 # 2. Copiar variáveis de ambiente
 cp supabase/.env.local.example supabase/.env.local
-# Preencher SUPABASE_DB_URL e JWT_SECRET
+# Preencher DATABASE_URL e JWT_SECRET
 
 # 3. Subir Supabase local
 supabase start
@@ -86,7 +86,7 @@ npm run dev
 
 | Variável | Descrição | Obrigatória |
 |----------|-----------|-------------|
-| `SUPABASE_DB_URL` | Connection string PostgreSQL | Sim |
+| `DATABASE_URL` | Connection string PostgreSQL lida pela API (`db.ts`) | Sim |
 | `JWT_SECRET` | Segredo para assinar tokens JWT | Sim |
 | `CORS_ORIGIN` | Origem permitida no CORS (padrão: `*`) | Não |
 
@@ -187,9 +187,14 @@ Secrets necessários: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
 ## Testes
 
 ```bash
-npm run test              # Roda todos os testes
+npm run test              # Testes dos workspaces (não inclui os testes Deno da API)
 npm run test -w @manager/web      # Apenas testes do web
+
+# Regressão da validação de serviços na API (sem banco ou segredos)
+deno test supabase/functions/api/tests/service-catalog-validation.test.ts
+# Alternativa sem Deno instalado: npx --yes deno test supabase/functions/api/tests/service-catalog-validation.test.ts
 ```
 
 Cobertura atual:
 - `apps/web` — testes unitários (LoginUseCase)
+- API (Deno) — schemas reais + `validateBody` do catálogo de serviços: limites, trim, UUID, opcionais e `HttpError` 400.

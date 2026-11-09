@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { ServiceCatalogForm } from '../../../presentation/components/ServiceCatalogForm'
 import type { ServiceCatalogWithCategory } from '@manager/domain'
 import { Button } from '../../../presentation/components/ui/Button'
 import { Modal } from '../../../presentation/components/ui/Modal'
 import { Input } from '../../../presentation/components/ui/Input'
-import { Select } from '../../../presentation/components/ui/Select'
 import {
   useServiceCatalog,
   useServiceCategories,
@@ -20,38 +20,6 @@ import type {
   AddServicePriceDto,
 } from '../../../domain/repositories/service-catalog.repository'
 
-function ServiceForm({
-  initial,
-  categories,
-  onSubmit,
-  onCancel,
-  loading,
-}: {
-  initial?: ServiceCatalogWithCategory
-  categories: { value: string; label: string }[]
-  onSubmit: (dto: CreateServiceCatalogDto) => void
-  onCancel: () => void
-  loading: boolean
-}) {
-  const [categoryId, setCategoryId] = useState(initial?.category_id ?? '')
-  const [name, setName] = useState(initial?.name ?? '')
-  const [description, setDescription] = useState(initial?.description ?? '')
-  const [unitType, setUnitType] = useState(initial?.unit_type ?? '')
-
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ category_id: categoryId, name, description: description || undefined, unit_type: unitType || undefined }) }} className="flex flex-col gap-4">
-      <Select label="Categoria *" options={categories} placeholder="Selecione..." value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required />
-      <Input label="Nome *" value={name} onChange={(e) => setName(e.target.value)} required />
-      <Input label="Descrição" value={description} onChange={(e) => setDescription(e.target.value)} />
-      <Input label="Unidade (ex: m², horas, unidade)" value={unitType} onChange={(e) => setUnitType(e.target.value)} />
-      <div className="flex justify-end gap-3">
-        <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" loading={loading}>Salvar</Button>
-      </div>
-    </form>
-  )
-}
-
 export default function ServiceCatalogPage() {
   const [includeInactive, setIncludeInactive] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
@@ -60,9 +28,11 @@ export default function ServiceCatalogPage() {
   const [pricingService, setPricingService] = useState<ServiceCatalogWithCategory | undefined>()
   const [newPrice, setNewPrice] = useState('')
   const [minPrice, setMinPrice] = useState('')
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const submitting = useRef(false)
 
-  const { data: services, isLoading } = useServiceCatalog(includeInactive)
-  const { data: categories } = useServiceCategories()
+  const { data: services, isLoading, isError: servicesError, refetch: refetchServices, isFetching: servicesFetching } = useServiceCatalog(includeInactive)
+  const { data: categories, isPending: categoriesLoading, isError: categoriesError, refetch: refetchCategories } = useServiceCategories()
   const create = useCreateServiceCatalog()
   const update = useUpdateServiceCatalog()
   const deactivate = useDeactivateService()
@@ -79,12 +49,27 @@ export default function ServiceCatalogPage() {
   }, {})
 
   const handleSubmit = async (dto: CreateServiceCatalogDto | UpdateServiceCatalogDto) => {
-    if (editing) {
-      await update.mutateAsync({ id: editing.id, dto: dto as UpdateServiceCatalogDto })
-    } else {
-      await create.mutateAsync(dto as CreateServiceCatalogDto)
+    if (submitting.current) return
+    submitting.current = true
+    setSubmitError(null)
+    try {
+      if (editing) {
+        const { name, description, unit_type } = dto
+        await update.mutateAsync({ id: editing.id, dto: { name, description, unit_type } })
+      } else {
+        await create.mutateAsync(dto as CreateServiceCatalogDto)
+      }
+      setModalOpen(false); setEditing(undefined)
+    } catch {
+      setSubmitError('Não foi possível salvar o serviço. Seus dados foram mantidos. Tente novamente.')
+    } finally {
+      submitting.current = false
     }
-    setModalOpen(false); setEditing(undefined)
+  }
+
+  const closeServiceModal = () => {
+    if (submitting.current) return
+    setModalOpen(false); setEditing(undefined); setSubmitError(null)
   }
 
   const handleAddPrice = async () => {
@@ -103,12 +88,17 @@ export default function ServiceCatalogPage() {
             <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} className="rounded" />
             Incluir inativos
           </label>
-          <Button onClick={() => { setEditing(undefined); setModalOpen(true) }}>+ Novo Serviço</Button>
+          <Button onClick={() => { setEditing(undefined); setSubmitError(null); setModalOpen(true) }}>+ Novo Serviço</Button>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="py-12 text-center text-gray-500">Carregando...</div>
+        <div role="status" className="py-12 text-center text-gray-500">Carregando...</div>
+      ) : servicesError ? (
+        <div role="alert" className="py-12 text-center text-red-600">
+          Não foi possível carregar o catálogo de serviços.
+          <Button variant="secondary" onClick={() => { void refetchServices() }} disabled={servicesFetching}>Tentar novamente</Button>
+        </div>
       ) : (
         <div className="flex flex-col gap-4">
           {Object.entries(grouped).map(([cat, items]) => (
@@ -138,7 +128,7 @@ export default function ServiceCatalogPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="secondary" onClick={() => { setEditing(svc); setModalOpen(true) }}>Editar</Button>
+                          <Button size="sm" variant="secondary" onClick={() => { setEditing(svc); setSubmitError(null); setModalOpen(true) }}>Editar</Button>
                           <Button size="sm" variant="secondary" onClick={() => { setPricingService(svc); setNewPrice(String(svc.current_price?.price_per_unit ?? '')); setPriceModalOpen(true) }}>Preço</Button>
                           {svc.is_active && (
                             <Button size="sm" variant="danger" onClick={() => deactivate.mutateAsync(svc.id)}>Desativar</Button>
@@ -157,13 +147,17 @@ export default function ServiceCatalogPage() {
         </div>
       )}
 
-      <Modal open={modalOpen} title={editing ? 'Editar Serviço' : 'Novo Serviço'} onClose={() => { setModalOpen(false); setEditing(undefined) }}>
-        <ServiceForm
+      <Modal open={modalOpen} title={editing ? 'Editar Serviço' : 'Novo Serviço'} onClose={closeServiceModal} closeDisabled={create.isPending || update.isPending}>
+        <ServiceCatalogForm
           initial={editing}
           categories={categoryOptions}
           onSubmit={handleSubmit}
-          onCancel={() => { setModalOpen(false); setEditing(undefined) }}
+          onCancel={closeServiceModal}
           loading={create.isPending || update.isPending}
+          categoriesLoading={categoriesLoading}
+          categoriesError={categoriesError}
+          retryCategories={() => { void refetchCategories() }}
+          submitError={submitError}
         />
       </Modal>
 
