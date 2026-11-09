@@ -45,9 +45,9 @@ export function useUpdateQuote() {
   return useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: UpdateQuoteDto }) =>
       container.quotes.update.execute(id, dto),
-    onSuccess: (_data, { id }) => {
-      qc.invalidateQueries({ queryKey: ['quotes'] })
-      qc.invalidateQueries({ queryKey: ['quotes', id] })
+    onSuccess: (data, { id }) => {
+      qc.setQueryData(['quotes', id], data)
+      return qc.invalidateQueries({ queryKey: ['quotes'] })
     },
   })
 }

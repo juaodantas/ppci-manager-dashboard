@@ -9,6 +9,7 @@ import {
 } from '@react-pdf/renderer'
 import type { Quote, QuoteItem } from '@manager/domain'
 import { getQuoteItemLabel, type ServiceNameById } from '../../utils/service-label'
+import { formatQuoteDate } from '../../utils/quote-edit'
 
 Font.register({
   family: 'Helvetica',
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   infoBlock: {
-    flex: 1,
+    // These blocks stack vertically: let their text determine the height.
     backgroundColor: '#F9FAFB',
     borderRadius: 4,
     padding: 10,
@@ -232,13 +233,6 @@ function getCompanyNameStyle(companyName: string) {
   return { fontSize: 20 }
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: 'Rascunho',
-  sent: 'Enviado',
-  approved: 'Aprovado',
-  rejected: 'Rejeitado',
-}
-
 interface QuotePDFProps {
   quote: Quote & { items: QuoteItem[] }
   customerName: string
@@ -256,7 +250,7 @@ export function QuotePDF({
   companyCnpj,
   serviceNameById = {},
 }: QuotePDFProps) {
-  const resolvedCustomerName = customerName.trim() || quote.customer_id || '—'
+  const resolvedCustomerName = customerName.trim() || '—'
   const resolvedCustomerDocument = customerDocument?.trim()
   const subtotal = (quote.items ?? []).reduce((s, i) => s + i.total_price, 0)
   const total = subtotal - (quote.discount ?? 0)
@@ -282,9 +276,8 @@ export function QuotePDF({
           <View style={styles.headerRight}>
             <Text style={styles.docTitle}>ORÇAMENTO</Text>
             <Text style={styles.docMeta}>Data: {fmtDate(quote.created_at)}</Text>
-            <Text style={styles.docMeta}>Status: {STATUS_LABELS[quote.status] ?? quote.status}</Text>
             {quote.valid_until && (
-              <Text style={styles.docMeta}>Válido até: {fmtDate(quote.valid_until)}</Text>
+              <Text style={styles.docMeta}>Válido até: {formatQuoteDate(quote.valid_until)}</Text>
             )}
           </View>
         </View>

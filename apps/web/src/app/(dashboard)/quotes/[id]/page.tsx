@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -13,6 +13,8 @@ import { Modal } from '../../../../presentation/components/ui/Modal'
 import { Input } from '../../../../presentation/components/ui/Input'
 import type { QuoteItem } from '@manager/domain'
 import { getQuoteItemLabel, type ServiceNameById } from '../../../../presentation/utils/service-label'
+import { getQuotePDFCustomer } from '../../../../presentation/utils/quote-pdf-customer'
+import { formatQuoteDate, formatQuoteMoney } from '../../../../presentation/utils/quote-edit'
 
 const QuoteDownloadButton = dynamic(
   () => import('../../../../presentation/components/pdf/QuoteDownloadButton').then((m) => m.QuoteDownloadButton),
@@ -31,19 +33,28 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params)
   const router = useRouter()
   const { data: quote, isLoading } = useQuote(id)
-  const { data: customer } = useCustomer(quote?.customer_id ?? '')
+  const customerQuery = useCustomer(quote?.customer_id ?? '')
   const { data: catalog } = useServiceCatalog()
   const { data: internalCompanies } = useInternalCompanies()
   const approve = useApproveQuote()
   const [approveOpen, setApproveOpen] = useState(false)
   const [projectName, setProjectName] = useState('')
   const [startDate, setStartDate] = useState('')
+  const [updated, setUpdated] = useState(false)
+
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    if (url.searchParams.get('updated') === '1') {
+      setUpdated(true)
+      url.searchParams.delete('updated')
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+    }
+  }, [id])
 
   if (isLoading) return <div className="py-12 text-center text-gray-500">Carregando...</div>
   if (!quote) return <div className="py-12 text-center text-gray-500">Orçamento não encontrado</div>
 
-  const customerName = customer?.name ?? quote.customer_id
-  const customerDocument = customer?.document
+  const pdfCustomer = getQuotePDFCustomer(customerQuery)
   const hasItems = (quote.items ?? []).length > 0
   const company = (internalCompanies?.companies ?? []).find((entry) => entry.id === quote.company_id)
   const serviceNameById = (catalog ?? []).reduce<ServiceNameById>((acc, service) => {
@@ -60,55 +71,74 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <Link href="/quotes"><Button variant="ghost" size="sm">← Voltar</Button></Link>
         <h1 className="text-2xl font-bold text-gray-900">Orçamento</h1>
         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[quote.status] ?? ''}`}>
           {STATUS_LABELS[quote.status] ?? quote.status}
         </span>
         {canApprove && (
+          <Link href={`/quotes/${id}/edit`}><Button variant="secondary">Editar</Button></Link>
+        )}
+        {canApprove && (
           <Button onClick={() => { setProjectName(''); setApproveOpen(true) }}>Aprovar → Projeto</Button>
         )}
         {hasItems && (
-          company ? (
+          !company ? (
+            <Button variant="secondary" size="sm" disabled>
+              Defina a empresa executora para gerar o documento
+            </Button>
+          ) : pdfCustomer.status === 'pending' ? (
+            <Button variant="secondary" size="sm" disabled loading loadingText="Carregando cliente para gerar PDF">
+              Carregando cliente…
+            </Button>
+          ) : pdfCustomer.status === 'unavailable' ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p role="alert" className="text-sm text-red-600">
+                Não foi possível obter um cliente com nome válido. O PDF está indisponível.
+              </p>
+              <Button variant="secondary" size="sm" onClick={() => void customerQuery.refetch()}>
+                Tentar novamente
+              </Button>
+            </div>
+          ) : (
             <QuoteDownloadButton
+              key={JSON.stringify([quote, pdfCustomer, company, serviceNameById])}
               quote={quote as typeof quote & { items: QuoteItem[] }}
-              customerName={customerName}
-              customerDocument={customerDocument}
+              customerName={pdfCustomer.name}
+              customerDocument={pdfCustomer.document}
               companyName={company.name}
               companyCnpj={company.cnpj}
               serviceNameById={serviceNameById}
             />
-          ) : (
-            <Button variant="secondary" size="sm" disabled>
-              Defina a empresa executora para gerar o documento
-            </Button>
           )
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-4 rounded-lg border border-gray-200 bg-white p-6">
+      {updated && <p role="status" className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">Orçamento atualizado com sucesso.</p>}
+
+      <div className="grid gap-4 rounded-lg border border-gray-200 bg-white p-6 sm:grid-cols-3">
         <div>
           <p className="text-xs font-medium uppercase text-gray-500">Data</p>
           <p className="mt-1 text-sm text-gray-900">{new Date(quote.created_at).toLocaleDateString('pt-BR')}</p>
         </div>
         <div>
           <p className="text-xs font-medium uppercase text-gray-500">Validade</p>
-          <p className="mt-1 text-sm text-gray-900">{quote.valid_until ? new Date(quote.valid_until).toLocaleDateString('pt-BR') : '—'}</p>
+          <p className="mt-1 text-sm text-gray-900">{formatQuoteDate(quote.valid_until)}</p>
         </div>
         <div>
           <p className="text-xs font-medium uppercase text-gray-500">Desconto</p>
           <p className="mt-1 text-sm text-gray-900">{quote.discount > 0 ? quote.discount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'}</p>
         </div>
         {quote.notes && (
-          <div className="col-span-3">
+          <div className="sm:col-span-3">
             <p className="text-xs font-medium uppercase text-gray-500">Observações</p>
             <p className="mt-1 text-sm text-gray-900">{quote.notes}</p>
           </div>
         )}
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
         <div className="border-b px-6 py-4">
           <h2 className="font-medium text-gray-900">Itens</h2>
         </div>
@@ -133,9 +163,17 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
           </tbody>
           <tfoot className="border-t">
             <tr>
-              <td colSpan={3} className="px-6 py-4 text-right text-sm font-medium text-gray-900">Total</td>
+              <td colSpan={3} className="px-6 py-2 text-right text-sm text-gray-700">Subtotal</td>
+              <td className="px-6 py-2 text-right text-sm text-gray-900">{formatQuoteMoney(quote.total_amount)}</td>
+            </tr>
+            <tr>
+              <td colSpan={3} className="px-6 py-2 text-right text-sm text-gray-700">Desconto</td>
+              <td className="px-6 py-2 text-right text-sm text-gray-900">{formatQuoteMoney(quote.discount ?? 0)}</td>
+            </tr>
+            <tr>
+              <td colSpan={3} className="px-6 py-4 text-right text-sm font-medium text-gray-900">Total líquido</td>
               <td className="px-6 py-4 text-right text-base font-bold text-gray-900">
-                {quote.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {formatQuoteMoney(quote.total_amount - (quote.discount ?? 0))}
               </td>
             </tr>
           </tfoot>

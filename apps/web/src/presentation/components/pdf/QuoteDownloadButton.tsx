@@ -31,12 +31,12 @@ export function QuoteDownloadButton({ quote, customerName, customerDocument, com
       )}
       fileName={filename}
     >
-      {({ loading }) => (
+      {({ loading, error }) => (
         <button
-          disabled={loading}
+          disabled={loading || !!error}
           className="inline-flex items-center justify-center gap-2 rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? 'Gerando PDF…' : 'Exportar PDF'}
+          {error ? 'Falha ao gerar PDF. Recarregue a página para tentar novamente.' : loading ? 'Gerando PDF…' : 'Exportar PDF'}
         </button>
       )}
     </PDFDownloadLink>

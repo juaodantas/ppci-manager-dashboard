@@ -17,9 +17,9 @@ export interface CreateQuoteDto {
 }
 
 export interface UpdateQuoteDto {
-  valid_until?: string
+  valid_until?: string | null
   discount?: number
-  notes?: string
+  notes?: string | null
   status?: 'draft' | 'sent' | 'rejected'
   company_id?: string
   items?: QuoteItemDto[]

@@ -1,11 +1,13 @@
 import { Hono } from 'npm:hono'
+import type { ContentfulStatusCode } from 'npm:hono/utils/http-status'
+import { z } from 'npm:zod'
 import { authMiddleware } from '../middleware/auth.ts'
 import { createQuote } from '../use-cases/quote/create-quote.ts'
 import { getAllQuotes, getQuoteById } from '../use-cases/quote/get-quote.ts'
 import { updateQuote } from '../use-cases/quote/update-quote.ts'
 import { deleteQuote } from '../use-cases/quote/delete-quote.ts'
 import { approveQuote } from '../use-cases/quote/approve-quote.ts'
-import { HttpError } from '../errors.ts'
+import { HttpError, badRequest } from '../errors.ts'
 import { validateBody } from '../validation/validate.ts'
 import { createQuoteSchema, updateQuoteSchema, approveQuoteSchema } from '../validation/schemas.ts'
 
@@ -28,7 +30,7 @@ quotes.post('/', async (c) => {
     const quote = await createQuote(dto)
     return c.json(quote, 201)
   } catch (err) {
-    if (err instanceof HttpError) return c.json({ error: err.message }, err.status)
+    if (err instanceof HttpError) return c.json({ error: err.message }, err.status as ContentfulStatusCode)
     throw err
   }
 })
@@ -39,20 +41,20 @@ quotes.get('/:id', async (c) => {
     const quote = await getQuoteById(id)
     return c.json(quote)
   } catch (err) {
-    if (err instanceof HttpError) return c.json({ error: err.message }, err.status)
+    if (err instanceof HttpError) return c.json({ error: err.message }, err.status as ContentfulStatusCode)
     throw err
   }
 })
 
 quotes.put('/:id', async (c) => {
-  const id = c.req.param('id')
-  const body = await c.req.json()
-  const dto = validateBody(updateQuoteSchema, body)
   try {
+    const id = validateBody(z.string().uuid(), c.req.param('id'))
+    const body = await c.req.json().catch(() => { throw badRequest('Invalid JSON body') })
+    const dto = validateBody(updateQuoteSchema, body)
     const quote = await updateQuote(id, dto)
     return c.json(quote)
   } catch (err) {
-    if (err instanceof HttpError) return c.json({ error: err.message }, err.status)
+    if (err instanceof HttpError) return c.json({ error: err.message }, err.status as ContentfulStatusCode)
     throw err
   }
 })
@@ -63,20 +65,20 @@ quotes.delete('/:id', async (c) => {
     await deleteQuote(id)
     return c.body(null, 204)
   } catch (err) {
-    if (err instanceof HttpError) return c.json({ error: err.message }, err.status)
+    if (err instanceof HttpError) return c.json({ error: err.message }, err.status as ContentfulStatusCode)
     throw err
   }
 })
 
 quotes.post('/:id/approve', async (c) => {
-  const id = c.req.param('id')
-  const body = await c.req.json()
-  const dto = validateBody(approveQuoteSchema, body)
   try {
+    const id = validateBody(z.string().uuid(), c.req.param('id'))
+    const body = await c.req.json().catch(() => { throw badRequest('Invalid JSON body') })
+    const dto = validateBody(approveQuoteSchema, body)
     const result = await approveQuote(id, dto)
     return c.json(result)
   } catch (err) {
-    if (err instanceof HttpError) return c.json({ error: err.message }, err.status)
+    if (err instanceof HttpError) return c.json({ error: err.message }, err.status as ContentfulStatusCode)
     throw err
   }
 })

@@ -1,5 +1,31 @@
 import sql from '../db.ts'
 import { Quote, QuoteItem } from '../../_shared/domain/entities/quote.entity.ts'
+import { badRequest, notFound } from '../errors.ts'
+import type { UpdateQuoteDto } from '../validation/schemas.ts'
+
+type Transaction = Parameters<Parameters<typeof sql.begin>[1]>[0]
+
+// Always use the transaction connection here: the shared pool has max: 1.
+async function loadQuote(tx: Transaction, id: string): Promise<Quote> {
+  const rows = await tx`SELECT * FROM quotes WHERE id = ${id}`
+  const items = await tx`SELECT * FROM quote_items WHERE quote_id = ${id} ORDER BY id`
+  return toQuote(rows[0], items.map(toQuoteItem))
+}
+
+async function lockEditableQuote(tx: Transaction, id: string, action: string): Promise<void> {
+  const rows = await tx`SELECT status FROM quotes WHERE id = ${id} FOR UPDATE`
+  if (rows.length === 0) throw notFound('Quote', id)
+  if (rows[0].status !== 'draft' && rows[0].status !== 'sent') {
+    throw badRequest(`Cannot ${action} a quote with status "${rows[0].status}"`)
+  }
+}
+
+function rethrowWriteError(error: unknown): never {
+  const code = (error as { code?: string })?.code
+  if (code === '23503') throw badRequest('Referenced service or company does not exist')
+  if (code === '22003') throw badRequest('Quote amounts exceed the supported numeric range')
+  throw error
+}
 
 // deno-lint-ignore no-explicit-any
 function toQuoteItem(row: Record<string, any>): QuoteItem {
@@ -105,47 +131,56 @@ export const QuoteRepository = {
 
   async update(
     id: string,
-    data: {
-      valid_until?: string | null
-      discount?: number
-      notes?: string | null
-      status?: Quote['status']
-      company_id?: string
-      items?: { service_id: string; quantity: number; unit_price: number; description?: string }[]
-    },
-  ): Promise<Quote | null> {
-    const rows = await sql`SELECT * FROM quotes WHERE id = ${id}`
-    if (rows.length === 0) return null
+    data: UpdateQuoteDto,
+  ): Promise<Quote> {
+    try {
+      return await sql.begin(async (tx) => {
+        await lockEditableQuote(tx, id, 'update')
+        if (data.company_id !== undefined) {
+          const companies = await tx`SELECT type FROM companies WHERE id = ${data.company_id}`
+          if (companies.length === 0 || companies[0].type !== 'internal') {
+            throw badRequest('company_id must reference a company of type internal')
+          }
+        }
 
-    await sql`
-      UPDATE quotes
-      SET
-        valid_until = COALESCE(${data.valid_until ?? null}, valid_until),
-        discount = COALESCE(${data.discount ?? null}, discount),
-        notes = COALESCE(${data.notes ?? null}, notes),
-        status = COALESCE(${data.status ?? null}::quote_status_enum, status),
-        company_id = COALESCE(${data.company_id ?? null}::uuid, company_id),
-        updated_at = now()
-      WHERE id = ${id}
-    `
-
-    if (data.items !== undefined) {
-      await sql`DELETE FROM quote_items WHERE quote_id = ${id}`
-      for (const item of data.items) {
-        await sql`
-          INSERT INTO quote_items (quote_id, service_id, quantity, unit_price, description)
-          VALUES (
-            ${id},
-            ${item.service_id},
-            ${item.quantity},
-            ${item.unit_price},
-            ${item.description ?? null}
-          )
+        await tx`
+          UPDATE quotes
+          SET
+            valid_until = CASE WHEN ${data.valid_until !== undefined} THEN ${data.valid_until ?? null}::date ELSE valid_until END,
+            discount = COALESCE(${data.discount ?? null}, discount),
+            notes = CASE WHEN ${data.notes !== undefined} THEN ${data.notes ?? null}::text ELSE notes END,
+            status = COALESCE(${data.status ?? null}::quote_status_enum, status),
+            company_id = COALESCE(${data.company_id ?? null}::uuid, company_id),
+            updated_at = now()
+          WHERE id = ${id}
         `
-      }
-    }
 
-    return this.findById(id)
+        if (data.items !== undefined) {
+          await tx`DELETE FROM quote_items WHERE quote_id = ${id}`
+          for (const item of data.items) {
+            await tx`
+              INSERT INTO quote_items (quote_id, service_id, quantity, unit_price, description)
+              VALUES (
+                ${id},
+                ${item.service_id},
+                ${item.quantity},
+                ${item.unit_price},
+                ${item.description ?? null}
+              )
+            `
+          }
+        }
+
+        // PostgreSQL's per-line numeric rounding and subtotal trigger are authoritative.
+        const updated = await loadQuote(tx, id)
+        if (updated.discount < 0 || updated.discount > updated.total_amount) {
+          throw badRequest('discount must not exceed the quote subtotal')
+        }
+        return updated
+      })
+    } catch (error) {
+      rethrowWriteError(error)
+    }
   },
 
   async updateStatus(id: string, status: Quote['status']): Promise<void> {
@@ -160,42 +195,46 @@ export const QuoteRepository = {
     id: string,
     projectData: { name: string; start_date?: string },
   ): Promise<{ project_id: string }> {
-    await sql`UPDATE quotes SET status = 'approved'::quote_status_enum, updated_at = now() WHERE id = ${id}`
+    try {
+      return await sql.begin(async (tx) => {
+        await lockEditableQuote(tx, id, 'approve')
+        const quote = await loadQuote(tx, id)
+        await tx`UPDATE quotes SET status = 'approved'::quote_status_enum, updated_at = now() WHERE id = ${id}`
 
-    const quote = await this.findById(id)
-    if (!quote) throw new Error('Quote not found after approve')
-
-    const totalValue = quote.total_amount - quote.discount
-
-    const projectRows = await sql`
-      INSERT INTO projects (customer_id, quote_id, name, start_date, total_value, company_id)
-      VALUES (
-        ${quote.customer_id},
-        ${quote.id},
-        ${projectData.name},
-        ${projectData.start_date ?? null},
-        ${totalValue},
-        ${quote.company_id ?? null}
-      )
-      RETURNING id
-    `
-    const projectId = projectRows[0].id as string
-
-    if (quote.items && quote.items.length > 0) {
-      for (const item of quote.items) {
-        await sql`
-          INSERT INTO project_services (project_id, service_id, quantity, unit_price, description)
+        const totalValue = quote.total_amount - quote.discount
+        const projectRows = await tx`
+          INSERT INTO projects (customer_id, quote_id, name, start_date, total_value, company_id)
           VALUES (
-            ${projectId},
-            ${item.service_id},
-            ${item.quantity},
-            ${item.unit_price},
-            ${item.description ?? null}
+            ${quote.customer_id},
+            ${quote.id},
+            ${projectData.name},
+            ${projectData.start_date ?? null},
+            ${totalValue},
+            ${quote.company_id ?? null}
           )
+          RETURNING id
         `
-      }
-    }
+        const projectId = projectRows[0].id as string
 
-    return { project_id: projectId }
+        for (const item of quote.items ?? []) {
+          await tx`
+            INSERT INTO project_services (project_id, service_id, quantity, unit_price, description)
+            VALUES (
+              ${projectId},
+              ${item.service_id},
+              ${item.quantity},
+              ${item.unit_price},
+              ${item.description ?? null}
+            )
+          `
+        }
+
+        // project_services' trigger recalculates the gross amount; restore the net snapshot last.
+        await tx`UPDATE projects SET total_value = ${totalValue} WHERE id = ${projectId}`
+        return { project_id: projectId }
+      })
+    } catch (error) {
+      rethrowWriteError(error)
+    }
   },
 }

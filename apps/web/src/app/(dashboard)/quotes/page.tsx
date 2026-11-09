@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { Button } from '../../../presentation/components/ui/Button'
 import { Select } from '../../../presentation/components/ui/Select'
 import { useQuotes, useDeleteQuote } from '../../../presentation/hooks/useQuotes'
+import { formatQuoteDate, formatQuoteMoney } from '../../../presentation/utils/quote-edit'
 
 const PAGE_SIZE = 20
 
@@ -78,7 +79,7 @@ function QuotesContent() {
         <div className="py-12 text-center text-gray-500">Carregando...</div>
       ) : (
         <>
-          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -106,16 +107,19 @@ function QuotesContent() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      {q.valid_until ? new Date(q.valid_until).toLocaleDateString('pt-BR') : '—'}
+                      {formatQuoteDate(q.valid_until)}
                     </td>
                     <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">
-                      {q.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      {formatQuoteMoney(q.total_amount - (q.discount ?? 0))}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         <Link href={`/quotes/${q.id}`}>
                           <Button size="sm" variant="secondary">Ver</Button>
                         </Link>
+                        {(q.status === 'draft' || q.status === 'sent') && (
+                          <Link href={`/quotes/${q.id}/edit`}><Button size="sm" variant="secondary">Editar</Button></Link>
+                        )}
                         {q.status === 'draft' && (
                           <Button size="sm" variant="danger" onClick={() => handleDelete(q.id)}>Excluir</Button>
                         )}

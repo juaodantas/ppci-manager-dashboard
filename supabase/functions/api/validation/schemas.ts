@@ -98,13 +98,19 @@ export const createQuoteSchema = z.object({
 })
 
 export const updateQuoteSchema = z.object({
-  valid_until: z.string().optional(),
-  discount: z.number().min(0).optional(),
-  notes: z.string().optional(),
+  valid_until: z.string().date().nullable().optional(),
+  discount: z.number().finite().min(0).max(99999999.99).multipleOf(0.01).optional(),
+  notes: z.string().nullable().optional(),
   status: z.enum(['draft', 'sent', 'rejected']).optional(),
   company_id: z.string().uuid().optional(),
-  items: z.array(quoteItemSchema).optional(),
-})
+  // Keep creation's existing validation separate from the edit contract.
+  items: z.array(z.object({
+    service_id: z.string().uuid(),
+    quantity: z.number().finite().positive().max(9999999.999).multipleOf(0.001),
+    unit_price: z.number().finite().positive().max(99999999.99).multipleOf(0.01),
+    description: z.string().optional(),
+  })).min(1).optional(),
+}).strict()
 
 export const approveQuoteSchema = z.object({
   name: z.string().min(1),
